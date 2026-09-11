@@ -36,6 +36,16 @@ import {
   skillGaps,
   summaryStats,
 } from "./data";
+import {
+  getCompetencyDomains,
+  getLearningRecommendations,
+  getSkillGapSummaries,
+  getSummaryStats,
+  type CompetencyDomain,
+  type LearningPathRecommendation,
+  type SkillGapSummary as SkillGapSummaryType,
+  type SummaryStat,
+} from "@/lib/learner-data";
 
 const iconMap: Record<string, LucideIcon> = {
   analytics: BarChart3,
@@ -134,9 +144,15 @@ export function WelcomeHeader() {
 }
 
 export function SummaryStats() {
+  const [stats, setStats] = useState<SummaryStat[]>(() => getSummaryStats());
+
+  useEffect(() => {
+    setStats(getSummaryStats());
+  }, []);
+
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {summaryStats.map((stat) => (
+      {stats.map((stat) => (
         <div key={stat.label} className={cn(card, "p-4")}>
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm font-semibold text-muted-foreground">
@@ -187,6 +203,12 @@ export function SummaryStats() {
 }
 
 export function CompetencyOverview() {
+  const [domains, setDomains] = useState<CompetencyDomain[]>(() => getCompetencyDomains());
+
+  useEffect(() => {
+    setDomains(getCompetencyDomains());
+  }, []);
+
   return (
     <section>
       <h2 className="text-xl font-bold tracking-tight text-foreground">
@@ -199,7 +221,7 @@ export function CompetencyOverview() {
       </p>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {competencyDomains.map((domain) => {
+        {domains.map((domain) => {
           const Icon = iconMap[domain.icon] ?? BarChart3;
 
           return (
@@ -356,6 +378,12 @@ export function CompetencyRadar({
 }
 
 export function PrioritySkillGaps() {
+  const [gaps, setGaps] = useState<SkillGapSummaryType[]>(() => getSkillGapSummaries());
+
+  useEffect(() => {
+    setGaps(getSkillGapSummaries());
+  }, []);
+
   return (
     <div className={cn(card, "p-6")}>
       <div className="flex items-start justify-between gap-3">
@@ -369,12 +397,12 @@ export function PrioritySkillGaps() {
         </div>
 
         <span className="shrink-0 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-bold text-destructive">
-          {skillGaps.length} Needs Attention
+          {gaps.length} Needs Attention
         </span>
       </div>
 
       <ul className="mt-5 space-y-4">
-        {skillGaps.map((gap) => {
+        {gaps.map((gap) => {
           const Icon = iconMap[gap.icon] ?? Terminal;
 
           return (
@@ -534,7 +562,13 @@ export function LearningPaths() {
 }
 
 export function SkillGapSummary() {
-  const visibleGaps = skillGaps.slice(0, 3);
+  const [gaps, setGaps] = useState<SkillGapSummaryType[]>(() => getSkillGapSummaries());
+
+  useEffect(() => {
+    setGaps(getSkillGapSummaries());
+  }, []);
+
+  const visibleGaps = gaps.slice(0, 3);
 
   return (
     <section className={cn(card, "p-5 lg:p-6")}>
@@ -545,15 +579,15 @@ export function SkillGapSummary() {
           </h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            {skillGaps.length > 0
+            {gaps.length > 0
               ? "Priority areas identified from your competency assessment."
               : "Take the AI assessment quiz to identify your skill gaps."}
           </p>
         </div>
 
-        {skillGaps.length > 0 ? (
+        {gaps.length > 0 ? (
           <span className="shrink-0 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-bold text-destructive">
-            {skillGaps.length} priority gaps
+            {gaps.length} priority gaps
           </span>
         ) : (
           <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
@@ -632,7 +666,13 @@ export function SkillGapSummary() {
 }
 
 export function LearningPathSummary() {
-  const visiblePaths = learningPaths.slice(0, 2);
+  const [paths, setPaths] = useState<LearningPathRecommendation[]>(() => getLearningRecommendations());
+
+  useEffect(() => {
+    setPaths(getLearningRecommendations());
+  }, []);
+
+  const visiblePaths = paths.slice(0, 2);
 
   return (
     <section className={cn(card, "p-5 lg:p-6")}>
@@ -643,15 +683,15 @@ export function LearningPathSummary() {
           </h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            {learningPaths.length > 0
+            {paths.length > 0
               ? "Personalized recommendations based on your role and competency gaps."
               : "Course recommendations unlock after taking your AI diagnostic assessment."}
           </p>
         </div>
 
-        {learningPaths.length > 0 ? (
+        {paths.length > 0 ? (
           <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent">
-            {learningPaths.length} recommended
+            {paths.length} recommended
           </span>
         ) : (
           <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
@@ -678,7 +718,7 @@ export function LearningPathSummary() {
                   </p>
 
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {path.track} · {path.duration} · {path.provider}
+                    {path.provider} · {path.duration} · {path.category}
                   </p>
                 </div>
 

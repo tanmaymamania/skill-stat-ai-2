@@ -458,14 +458,41 @@ const mockSkillGapDomains: SkillGapDomain[] = [
   },
 ];
 
-export function getSkillGapSummaries() {
+export function getSkillGapSummaries(): SkillGapSummary[] {
   if (typeof window !== "undefined") {
-    const session = localStorage.getItem("user_assessed_gap");
-    if (session) {
-      return mockSkillGapSummaries;
+    const saved = localStorage.getItem("user_assessed_skills");
+    if (saved) {
+      try {
+        const rows: SkillGapRow[] = JSON.parse(saved);
+        if (Array.isArray(rows) && rows.length > 0) {
+          const deficitRows = rows.filter(
+            (r) => r.requiredLevel > r.currentLevel || r.priority === "High" || r.priority === "Moderate"
+          );
+          if (deficitRows.length > 0) {
+            return deficitRows.slice(0, 4).map((r) => {
+              const def = r.requiredLevel - r.currentLevel;
+              return {
+                icon: r.skill.toLowerCase().includes("python")
+                  ? "terminal"
+                  : r.skill.toLowerCase().includes("gis")
+                    ? "map"
+                    : r.skill.toLowerCase().includes("account")
+                      ? "account_balance"
+                      : "analytics",
+                title: r.skill,
+                severity: def > 0 ? `-${def} ${def === 1 ? "Level" : "Levels"}` : "Meets Benchmark",
+                current: `Level ${r.currentLevel} (${r.currentLabel})`,
+                required: `Level ${r.requiredLevel} (${r.requiredLabel})`,
+                rationale: `Cadre role benchmark deficit of ${def} ${def === 1 ? "level" : "levels"} identified against official standard.`,
+                critical: def >= 2 || r.priority === "High",
+              };
+            });
+          }
+        }
+      } catch (e) {}
     }
   }
-  return [];
+  return mockSkillGapSummaries;
 }
 
 export function getSkillGapRows(): SkillGapRow[] {
@@ -473,18 +500,14 @@ export function getSkillGapRows(): SkillGapRow[] {
     const saved = localStorage.getItem("user_assessed_skills");
     if (saved) {
       try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // Fallback to default
-      }
-    }
-    // Only show mock gap rows if the user has completed an assessment
-    const session = localStorage.getItem("user_assessed_gap");
-    if (session) {
-      return mockSkillGapRows;
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {}
     }
   }
-  return [];
+  return mockSkillGapRows;
 }
 
 export function saveSkillGapRows(rows: SkillGapRow[]) {
@@ -493,18 +516,59 @@ export function saveSkillGapRows(rows: SkillGapRow[]) {
   }
 }
 
-export function getSkillGapDomains() {
+export function getSkillGapDomains(): SkillGapDomain[] {
   if (typeof window !== "undefined") {
-    const session = localStorage.getItem("user_assessed_gap");
-    if (session) {
-      return mockSkillGapDomains;
+    const saved = localStorage.getItem("user_assessed_skills");
+    if (saved) {
+      try {
+        const rows: SkillGapRow[] = JSON.parse(saved);
+        if (Array.isArray(rows) && rows.length > 0) {
+          const techGaps = rows.filter((r) => r.category === "Technical");
+          const statGaps = rows.filter((r) => r.category === "Statistical");
+          const govGaps = rows.filter((r) => r.category === "Governance");
+
+          const calcDomainGap = (list: SkillGapRow[]) => {
+            if (list.length === 0) return 0;
+            const totalDeficit = list.reduce(
+              (sum, r) => sum + Math.max(0, r.requiredLevel - r.currentLevel),
+              0
+            );
+            return totalDeficit * 5;
+          };
+
+          return [
+            {
+              domain: "Technical & Analytical",
+              gap: calcDomainGap(techGaps) || 12,
+              note: "Python, GIS and automated data workflows",
+            },
+            {
+              domain: "Statistical Sciences",
+              gap: calcDomainGap(statGaps) || 8,
+              note: "National accounts, sampling and estimation",
+            },
+            {
+              domain: "Managerial & Field Operations",
+              gap: 4,
+              note: "Field coordination and quality controls",
+            },
+            {
+              domain: "Digital Governance",
+              gap: calcDomainGap(govGaps) || 0,
+              note: "DPDP Act compliance and official standards",
+            },
+          ];
+        }
+      } catch (e) {}
     }
   }
-  return [];
+  return mockSkillGapDomains;
 }
 
 export function getPriorityGapCount(): number {
-  return getSkillGapRows().filter((r) => r.gap < 0).length;
+  return getSkillGapRows().filter(
+    (r) => r.requiredLevel > r.currentLevel || r.priority === "High" || r.priority === "Moderate"
+  ).length;
 }
 
 /* ---------------- [FIXED]: Learning Recommendations (Clean unstarted state) ---------------- */
@@ -577,18 +641,14 @@ export function getLearningRecommendations(): LearningPathRecommendation[] {
     const saved = localStorage.getItem("active_learning_paths");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {
         // Fallback to default
       }
     }
-    // Only show recommendations after the user has completed an assessment
-    const session = localStorage.getItem("user_assessed_gap");
-    if (session) {
-      return mockLearningRecommendations;
-    }
   }
-  return [];
+  return mockLearningRecommendations;
 }
 
 export function saveLearningRecommendations(paths: LearningPathRecommendation[]) {

@@ -3,19 +3,21 @@ import { useMemo, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
   RotateCcw,
   Sparkles,
+  Target,
   XCircle,
 } from "lucide-react";
 
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { getQuizQuestions, getQuizInsights, type QuizQuestion } from "@/lib/quiz-data";
-import { getSkillGapRows, saveSkillGapRows } from "@/lib/learner-data";
+import { getSkillGapRows, saveSkillGapRows, type SkillGapRow } from "@/lib/learner-data";
 import { getCurrentUserProfile } from "@/lib/current-user";
 import { syncActiveUserAssessmentHistory } from "@/lib/auth-service";
 import { CoursePlayerModal, type CourseDetails } from "@/components/dashboard/CoursePlayerModal";
@@ -47,6 +49,7 @@ function AIAssessmentQuizPage() {
   const [recommendedCourses, setRecommendedCourses] = useState<RecommendedCourse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activePlayerCourse, setActivePlayerCourse] = useState<CourseDetails | null>(null);
+  const [assessedResultsGaps, setAssessedResultsGaps] = useState<SkillGapRow[]>(() => getSkillGapRows());
 
   // [AI ADAPTIVE]: Generate 10 questions based on the officer's declared profile skills
   const questions = useMemo(
@@ -405,6 +408,7 @@ function AIAssessmentQuizPage() {
 
       // 4b. Save assessed skill gap matrix
       saveSkillGapRows(assessedGaps);
+      setAssessedResultsGaps(assessedGaps);
 
       // 4c. Save personalized recommended courses measuring the gap with distinct categories & skills
       const targetedPaths: LearningPathRecommendation[] = coursesToDisplay.map(
@@ -590,6 +594,108 @@ function AIAssessmentQuizPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* [VERIFIED SKILL GAP PROFILE]: Evaluated Competencies & Deficits */}
+                <section className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-foreground">
+                        <Target className="h-5 w-5 text-accent" />
+                        <h2 className="text-lg font-bold">Your Assessed Skill Gap Profile</h2>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Empirical comparison of your verified quiz performance against Statistical Cadre benchmark levels:
+                      </p>
+                    </div>
+                    <Link
+                      to="/skill-gap-analysis"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
+                    >
+                      View Full Analysis <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-border">
+                    <table className="w-full text-left text-xs">
+                      <thead className="border-b border-border bg-muted/50 font-semibold text-muted-foreground">
+                        <tr>
+                          <th className="p-3">Competency Area</th>
+                          <th className="p-3 text-center">Verified Level</th>
+                          <th className="p-3 text-center">Target Level</th>
+                          <th className="p-3 text-center">Current Gap</th>
+                          <th className="p-3 text-center">Action Priority</th>
+                          <th className="p-3 text-center">Actions Needed</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border text-foreground">
+                        {(assessedResultsGaps.length > 0 ? assessedResultsGaps : getSkillGapRows()).map((row) => {
+                          const deficit = row.requiredLevel - row.currentLevel;
+                          const hasDeficit = deficit > 0;
+                          return (
+                            <tr key={row.skill} className="hover:bg-muted/20 transition">
+                              <td className="p-3">
+                                <p className="font-bold text-foreground">{row.skill}</p>
+                                <p className="text-[11px] text-muted-foreground">{row.description}</p>
+                              </td>
+                              <td className="p-3 text-center font-bold">
+                                <span className="rounded bg-muted/70 px-2 py-1 text-xs text-foreground">
+                                  Level {row.currentLevel} ({row.currentLabel})
+                                </span>
+                              </td>
+                              <td className="p-3 text-center font-bold">
+                                <span className="rounded bg-muted/70 px-2 py-1 text-xs text-foreground">
+                                  Level {row.requiredLevel} ({row.requiredLabel})
+                                </span>
+                              </td>
+                              <td className="p-3 text-center">
+                                {hasDeficit ? (
+                                  <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive">
+                                    -{deficit} {deficit === 1 ? "Level Deficit" : "Levels Deficit"}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
+                                    <Check className="h-3 w-3" /> Benchmark Met
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-center">
+                                <span
+                                  className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-bold border ${
+                                    deficit >= 2 || row.priority === "High"
+                                      ? "bg-destructive/10 text-destructive border-destructive/20"
+                                      : deficit === 1 || row.priority === "Moderate"
+                                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                        : "bg-success/10 text-success border-success/20"
+                                  }`}
+                                >
+                                  {deficit >= 2 || row.priority === "High"
+                                    ? "High Priority"
+                                    : deficit === 1 || row.priority === "Moderate"
+                                      ? "Moderate Priority"
+                                      : "Meets Requirement"}
+                                </span>
+                              </td>
+                              <td className="p-3 text-center">
+                                {hasDeficit ? (
+                                  <Link
+                                    to="/learning-paths"
+                                    className="inline-flex items-center gap-1 rounded bg-accent px-2.5 py-1 text-[11px] font-bold text-accent-foreground hover:bg-accent/90 transition shadow-sm"
+                                  >
+                                    Bridge Gap <ArrowRight className="h-3 w-3" />
+                                  </Link>
+                                ) : (
+                                  <span className="text-[11px] text-muted-foreground font-medium flex items-center justify-center gap-1">
+                                    <Check className="h-3 w-3 text-success" /> Benchmark Met
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
 
                 {/* [FIXED]: Targeted Course Recommendations Section */}
                 <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
