@@ -24,7 +24,7 @@ function LoginPage() {
     e.preventDefault();
     if (typeof window !== "undefined") {
       localStorage.setItem("user_authenticated", "true");
-      window.location.href = "/dashboard";
+      window.location.href = "/ai-assessment-quiz";
     }
   };
 
@@ -123,7 +123,7 @@ function LoginPage() {
               if (typeof window !== "undefined") {
                 localStorage.setItem("user_authenticated", "true");
                 localStorage.setItem("auth_provider", "google");
-                window.location.href = "/build-profile";
+                window.location.href = "/ai-assessment-quiz";
               }
             }}
             className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"

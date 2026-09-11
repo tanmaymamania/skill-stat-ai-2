@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -141,27 +141,15 @@ function LearningPathCard({ path }: { path: LearningPath }) {
             {path.priority} priority
           </div>
 
-          {path.courseUrl ? (
-            <a
-              href={path.courseUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[11px] font-semibold text-accent-foreground transition hover:bg-accent/90"
-            >
-              {path.status === "In Progress" ? "Continue" : "View Path"}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-[11px] font-semibold text-muted-foreground"
-              title="Course link will be provided during integration"
-            >
-              {path.status === "In Progress" ? "Continue" : "View Path"}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <a
+            href={path.courseUrl || "https://igotkarmayogi.gov.in"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-[11px] font-semibold text-accent-foreground transition hover:bg-accent/90"
+          >
+            {path.status === "In Progress" ? "Continue Course" : "Open Course"}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </a>
         </div>
       </div>
     </article>
@@ -170,7 +158,11 @@ function LearningPathCard({ path }: { path: LearningPath }) {
 
 function LearningPathsPage() {
   const currentUser = getCurrentUserProfile();
-  const learningPaths = getLearningRecommendations();
+  const [learningPaths, setLearningPaths] = useState<LearningPathRecommendation[]>([]);
+
+  useEffect(() => {
+    setLearningPaths(getLearningRecommendations());
+  }, []);
 
   const [activeFilter, setActiveFilter] =
     useState<"All" | LearningPathStatus>("All");
@@ -301,16 +293,30 @@ function LearningPathsPage() {
             </section>
 
             {filteredPaths.length === 0 && (
-              <div className="rounded-xl border border-dashed border-border bg-card px-5 py-10 text-center">
-                <BookOpen className="mx-auto h-7 w-7 text-muted-foreground" />
+              <div className="rounded-xl border border-dashed border-border bg-card px-5 py-12 text-center">
+                <BookOpen className="mx-auto h-9 w-9 text-muted-foreground/50" />
 
-                <h3 className="mt-3 text-sm font-bold text-foreground">
-                  No learning paths in this category
+                <h3 className="mt-3 text-base font-bold text-foreground">
+                  {learningPaths.length === 0
+                    ? "No Course Recommendations Yet"
+                    : "No learning paths in this category"}
                 </h3>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Try another filter to view available learning paths.
+                <p className="mt-1.5 max-w-md mx-auto text-xs text-muted-foreground leading-relaxed">
+                  {learningPaths.length === 0
+                    ? "Personalized courses from iGOT Karmayogi and MoSPI are recommended based on the competency gaps measured during your AI Assessment Quiz. Complete the diagnostic assessment to generate your personalized path."
+                    : "Try selecting another category or clear your filter to view available courses."}
                 </p>
+
+                {learningPaths.length === 0 && (
+                  <Link
+                    to="/ai-assessment-quiz"
+                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-xs font-semibold text-accent-foreground transition hover:bg-accent/90"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Take AI Assessment Quiz
+                  </Link>
+                )}
               </div>
             )}
           </div>

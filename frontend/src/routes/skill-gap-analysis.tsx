@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { AlertTriangle, Check, Target, TrendingDown } from "lucide-react";
+import { AlertTriangle, Check, Sparkles, Target, TrendingDown } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -81,56 +81,81 @@ function SkillGapAnalysisPage() {
               ))}
             </div>
 
-            {/* Skill Gap Table */}
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-border bg-muted/50 font-semibold text-muted-foreground">
-                  <tr>
-                    <th className="p-3.5">Competency Skill</th>
-                    <th className="p-3.5">Domain</th>
-                    <th className="p-3.5 text-center">Verified Level</th>
-                    <th className="p-3.5 text-center">Target Level</th>
-                    <th className="p-3.5 text-center">Current Gap</th>
-                    <th className="p-3.5 text-center">Action Priority</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-foreground">
-                  {filteredRows.map((row) => (
-                    <tr key={row.skill} className="hover:bg-muted/20">
-                      <td className="p-3.5">
-                        <p className="font-bold text-foreground">{row.skill}</p>
-                        <p className="text-[11px] text-muted-foreground">{row.description}</p>
-                      </td>
-                      <td className="p-3.5">
-                        <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold">
-                          {row.category}
-                        </span>
-                      </td>
-                      <td className="p-3.5 text-center font-bold">Level {row.currentLevel}</td>
-                      <td className="p-3.5 text-center font-bold">Level {row.requiredLevel}</td>
-                      <td className="p-3.5 text-center">
-                        {row.gap < 0 ? (
-                          <span className="font-bold text-destructive">{row.gap} Levels</span>
-                        ) : (
-                          <span className="font-bold text-success">✓ Benchmark Met</span>
-                        )}
-                      </td>
-                      <td className="p-3.5 text-center">
-                        {row.gap < 0 ? (
-                          <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-[10px] font-bold text-destructive">
-                            High Priority
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-bold text-success">
-                            Meets Requirement
-                          </span>
-                        )}
-                      </td>
+            {/* Skill Gap Table / Empty State */}
+            {filteredRows.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
+                <Target className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <h3 className="mt-3 text-base font-bold text-foreground">
+                  {gapRows.length === 0
+                    ? "No Skill Gaps Identified Yet"
+                    : "No skill gaps in this category"}
+                </h3>
+                <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
+                  {gapRows.length === 0
+                    ? "Your competency levels and skill gaps are established through the AI Diagnostic Assessment Quiz. Take the quiz to compare your skills against cadre benchmarks."
+                    : "Try selecting another filter above to view other competencies."}
+                </p>
+                {gapRows.length === 0 && (
+                  <Link
+                    to="/ai-assessment-quiz"
+                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-xs font-semibold text-accent-foreground transition hover:bg-accent/90"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Start Assessment Quiz
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-border bg-muted/50 font-semibold text-muted-foreground">
+                    <tr>
+                      <th className="p-3.5">Competency Skill</th>
+                      <th className="p-3.5">Domain</th>
+                      <th className="p-3.5 text-center">Verified Level</th>
+                      <th className="p-3.5 text-center">Target Level</th>
+                      <th className="p-3.5 text-center">Current Gap</th>
+                      <th className="p-3.5 text-center">Action Priority</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border text-foreground">
+                    {filteredRows.map((row) => (
+                      <tr key={row.skill} className="hover:bg-muted/20">
+                        <td className="p-3.5">
+                          <p className="font-bold text-foreground">{row.skill}</p>
+                          <p className="text-[11px] text-muted-foreground">{row.description}</p>
+                        </td>
+                        <td className="p-3.5">
+                          <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold">
+                            {row.category}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-center font-bold">Level {row.currentLevel}</td>
+                        <td className="p-3.5 text-center font-bold">Level {row.requiredLevel}</td>
+                        <td className="p-3.5 text-center">
+                          {row.gap < 0 ? (
+                            <span className="font-bold text-destructive">{row.gap} Levels</span>
+                          ) : (
+                            <span className="font-bold text-success">✓ Benchmark Met</span>
+                          )}
+                        </td>
+                        <td className="p-3.5 text-center">
+                          {row.gap < 0 ? (
+                            <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-[10px] font-bold text-destructive">
+                              High Priority
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-bold text-success">
+                              Meets Requirement
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </main>
       </div>

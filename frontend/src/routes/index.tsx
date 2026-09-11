@@ -218,7 +218,7 @@ function Index() {
                 if (typeof window !== "undefined") {
                   localStorage.setItem("user_authenticated", "true");
                   localStorage.setItem("auth_provider", "google");
-                  window.location.href = role === "learner" ? "/build-profile" : "/admin-dashboard";
+                  window.location.href = role === "learner" ? "/ai-assessment-quiz" : "/admin-dashboard";
                 }
               }}
               className="mt-3 flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"

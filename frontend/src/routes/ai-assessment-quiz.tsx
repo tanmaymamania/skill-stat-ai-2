@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   RotateCcw,
   Sparkles,
   XCircle,
@@ -126,23 +127,109 @@ function AIAssessmentQuizPage() {
 
     setRecommendedCourses(coursesToDisplay);
 
-    // 3. [FIXED]: Dynamically Update Skill Gaps in Storage
-    const existingGaps = getSkillGapRows();
+    // 3. [FIXED]: Dynamically save assessment result, measured skill gaps, and courses to storage
     const evaluatedLevel = score >= 80 ? 4 : score >= 60 ? 3 : 2;
-    const updatedGaps = existingGaps.map((row) => {
-      if (row.skill.includes("Survey") || row.skill.includes("Sampling")) {
-        const gap = evaluatedLevel - row.requiredLevel;
-        return {
-          ...row,
+    const requiredLevel = 4;
+    const calculatedGap = evaluatedLevel - requiredLevel;
+
+    if (typeof window !== "undefined") {
+      // 3a. Save official assessment score and verified level
+      localStorage.setItem(
+        "user_assessed_gap",
+        JSON.stringify({
+          score: { percentage: score },
+          current_level: evaluatedLevel,
+          target_level: requiredLevel,
+          gap: calculatedGap,
+          skill: "Survey Design & Statistical Computing",
+          assessed_at: new Date().toISOString(),
+        })
+      );
+
+      // 3b. Generate evaluated competency skill gaps based on the quiz score
+      const assessedGaps: SkillGapRow[] = [
+        {
+          skill: "Survey Design & Sampling",
+          category: "Statistical",
+          description: "Survey design, stratification and sampling estimation",
           currentLevel: evaluatedLevel,
-          currentLabel: evaluatedLevel >= 4 ? "Advanced" : evaluatedLevel === 3 ? "Intermediate" : "Foundational",
-          gap: gap,
-          priority: gap >= 0 ? ("Low" as const) : ("High" as const),
-        };
-      }
-      return row;
-    });
-    saveSkillGapRows(updatedGaps);
+          currentLabel:
+            evaluatedLevel >= 4
+              ? "Advanced"
+              : evaluatedLevel === 3
+                ? "Intermediate"
+                : "Foundational",
+          requiredLevel: 4,
+          requiredLabel: "Advanced",
+          gap: calculatedGap,
+          priority: calculatedGap < 0 ? "High" : "Low",
+        },
+        {
+          skill: "Python for Statistical Computing",
+          category: "Technical",
+          description: "Pandas, NumPy, automated data validation and processing",
+          currentLevel: evaluatedLevel >= 3 ? 3 : 2,
+          currentLabel: evaluatedLevel >= 3 ? "Intermediate" : "Foundational",
+          requiredLevel: 4,
+          requiredLabel: "Advanced",
+          gap: (evaluatedLevel >= 3 ? 3 : 2) - 4,
+          priority: "High",
+        },
+        {
+          skill: "GIS & Spatial Data Analysis",
+          category: "Technical",
+          description: "QGIS, spatial mapping and geospatial micro-data analysis",
+          currentLevel: 2,
+          currentLabel: "Foundational",
+          requiredLevel: 3,
+          requiredLabel: "Intermediate",
+          gap: -1,
+          priority: "Moderate",
+        },
+        {
+          skill: "National Accounts & GSDP Estimation",
+          category: "Statistical",
+          description: "National accounts concepts and state estimation methods",
+          currentLevel: evaluatedLevel >= 3 ? 3 : 2,
+          currentLabel: evaluatedLevel >= 3 ? "Intermediate" : "Foundational",
+          requiredLevel: 4,
+          requiredLabel: "Advanced",
+          gap: (evaluatedLevel >= 3 ? 3 : 2) - 4,
+          priority: "High",
+        },
+        {
+          skill: "Digital Data Governance",
+          category: "Governance",
+          description: "Data privacy, protection and government data standards",
+          currentLevel: evaluatedLevel >= 3 ? 4 : 3,
+          currentLabel: evaluatedLevel >= 3 ? "Advanced" : "Intermediate",
+          requiredLevel: 3,
+          requiredLabel: "Intermediate",
+          gap: (evaluatedLevel >= 3 ? 4 : 3) - 3,
+          priority: "Low",
+        },
+      ];
+      saveSkillGapRows(assessedGaps);
+
+      // 3c. Save personalized recommended courses measuring the gap
+      const targetedPaths: LearningPathRecommendation[] = coursesToDisplay.map(
+        (c, idx) => ({
+          id: idx + 1,
+          title: c.name,
+          description: c.description,
+          provider: c.provider,
+          category: "Technical",
+          duration: `${c.duration_hours} hours`,
+          skills: ["Survey Design", "Data Analysis", "Automation"],
+          status: "Recommended",
+          progress: 0,
+          priority: c.difficulty_level >= 4 ? "High" : "Medium",
+          whyRecommended: c.reason,
+          courseUrl: "https://igotkarmayogi.gov.in",
+        })
+      );
+      localStorage.setItem("active_learning_paths", JSON.stringify(targetedPaths));
+    }
 
     setIsSubmitting(false);
     setView("results");
@@ -281,30 +368,58 @@ function AIAssessmentQuizPage() {
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     {recommendedCourses.map((c) => (
-                      <div key={c.course_id} className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="rounded bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">
-                            {c.provider}
-                          </span>
-                          <span className="text-xs font-semibold text-muted-foreground">{c.duration_hours} Hours</span>
+                      <div key={c.course_id} className="rounded-xl border border-border bg-muted/20 p-4 space-y-2 flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="rounded bg-accent-soft px-2 py-0.5 text-[10px] font-bold text-accent">
+                              {c.provider}
+                            </span>
+                            <span className="text-xs font-semibold text-muted-foreground">{c.duration_hours} Hours</span>
+                          </div>
+                          <h3 className="text-sm font-bold text-foreground">{c.name}</h3>
+                          <p className="text-xs text-muted-foreground">{c.description}</p>
+                          <div className="rounded-lg bg-accent/10 p-2 text-[11px] font-medium text-accent">
+                            ✓ {c.reason}
+                          </div>
                         </div>
-                        <h3 className="text-sm font-bold text-foreground">{c.name}</h3>
-                        <p className="text-xs text-muted-foreground">{c.description}</p>
-                        <div className="rounded-lg bg-accent/10 p-2 text-[11px] font-medium text-accent">
-                          ✓ {c.reason}
+
+                        <div className="pt-2">
+                          <a
+                            href="https://igotkarmayogi.gov.in"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent/90"
+                          >
+                            Open Course on iGOT <ExternalLink className="h-3 w-3" />
+                          </a>
                         </div>
                       </div>
                     ))}
                   </div>
                 </section>
 
-                {/* Link to Skill Gap Page to verify updated gap */}
-                <div className="flex justify-end gap-3">
+                {/* Navigation options after completing assessment */}
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <Link
+                    to="/learning-paths"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted"
+                  >
+                    <BookOpen className="h-4 w-4 text-accent" />
+                    Open Learning Paths
+                  </Link>
+
                   <Link
                     to="/skill-gap-analysis"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted"
+                  >
+                    View Skill Gap Analysis
+                  </Link>
+
+                  <Link
+                    to="/dashboard"
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
                   >
-                    View Updated Skill Gap Analysis <ArrowRight className="h-4 w-4" />
+                    Go to Dashboard <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>

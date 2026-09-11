@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -70,30 +71,64 @@ function ProgressBar({
 }
 
 export function WelcomeHeader() {
+  const [hasAssessed, setHasAssessed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setHasAssessed(Boolean(localStorage.getItem("user_assessed_gap")));
+    }
+  }, []);
+
   return (
-    <section className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5 text-success" />
-          {officer.cadre}
+    <section className="space-y-4">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-success" />
+            {officer.cadre}
+          </div>
+
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-foreground lg:text-4xl">
+            Welcome back, {officer.name}
+          </h1>
+
+          <p className="mt-2 text-sm text-muted-foreground">{officer.role}</p>
         </div>
 
-        <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-foreground lg:text-4xl">
-          Welcome back, {officer.name}
-        </h1>
-
-        <p className="mt-2 text-sm text-muted-foreground">{officer.role}</p>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to="/ai-assessment-quiz"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
+          >
+            <Sparkles className="h-4 w-4" />
+            {hasAssessed ? "Retake AI Quiz" : "Start Assessment Quiz"}
+          </Link>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Link
-          to="/ai-assessment-quiz"
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
-        >
-          <Sparkles className="h-4 w-4" />
-          Generate AI Quiz
-        </Link>
-      </div>
+      {!hasAssessed && (
+        <div className="flex flex-col gap-3 rounded-xl border border-accent/30 bg-accent-soft/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                Diagnostic Assessment Required
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Complete the adaptive AI quiz to evaluate your competencies, identify skill gaps against cadre benchmarks, and unlock targeted course recommendations.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/ai-assessment-quiz"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition hover:bg-accent/90"
+          >
+            Take Quiz Now <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
     </section>
   );
 }
@@ -510,62 +545,88 @@ export function SkillGapSummary() {
           </h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Priority areas identified from your competency assessment.
+            {skillGaps.length > 0
+              ? "Priority areas identified from your competency assessment."
+              : "Take the AI assessment quiz to identify your skill gaps."}
           </p>
         </div>
 
-        <span className="shrink-0 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-bold text-destructive">
-          {skillGaps.length} priority gaps
-        </span>
+        {skillGaps.length > 0 ? (
+          <span className="shrink-0 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-bold text-destructive">
+            {skillGaps.length} priority gaps
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+            No data yet
+          </span>
+        )}
       </div>
 
-      <div className="mt-5 divide-y divide-border">
-        {visibleGaps.map((gap) => {
-          const Icon = iconMap[gap.icon] ?? Terminal;
+      {visibleGaps.length > 0 ? (
+        <>
+          <div className="mt-5 divide-y divide-border">
+            {visibleGaps.map((gap) => {
+              const Icon = iconMap[gap.icon] ?? Terminal;
 
-          return (
-            <div
-              key={gap.title}
-              className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+              return (
+                <div
+                  key={gap.title}
+                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                    <Icon className="h-4 w-4" />
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-foreground">
+                      {gap.title}
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Current {gap.current} · Required {gap.required}
+                    </p>
+                  </div>
+
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-1 text-[11px] font-bold",
+                      gap.critical
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-accent-soft text-accent",
+                    )}
+                  >
+                    {gap.severity}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <Link
+              to="/skill-gap-analysis"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
             >
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
-                <Icon className="h-4 w-4" />
-              </span>
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-foreground">
-                  {gap.title}
-                </p>
-
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Current {gap.current} · Required {gap.required}
-                </p>
-              </div>
-
-              <span
-                className={cn(
-                  "shrink-0 rounded-full px-2 py-1 text-[11px] font-bold",
-                  gap.critical
-                    ? "bg-destructive/10 text-destructive"
-                    : "bg-accent-soft text-accent",
-                )}
-              >
-                {gap.severity}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-4 border-t border-border pt-4">
-        <Link
-          to="/skill-gap-analysis"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
-        >
-          View Full Skill Gap Analysis
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
+              View Full Skill Gap Analysis
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </>
+      ) : (
+        <div className="mt-5 flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 py-8 text-center">
+          <Sparkles className="h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm font-semibold text-muted-foreground">
+            No skill gaps identified yet
+          </p>
+          <Link
+            to="/ai-assessment-quiz"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-accent-foreground hover:bg-accent/90"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Take AI Assessment Quiz
+          </Link>
+        </div>
+      )}
     </section>
   );
 }
@@ -582,52 +643,85 @@ export function LearningPathSummary() {
           </h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Personalized recommendations based on your role and competency
-            gaps.
+            {learningPaths.length > 0
+              ? "Personalized recommendations based on your role and competency gaps."
+              : "Course recommendations unlock after taking your AI diagnostic assessment."}
           </p>
         </div>
 
-        <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent">
-          {learningPaths.length} recommended
-        </span>
+        {learningPaths.length > 0 ? (
+          <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-accent">
+            {learningPaths.length} recommended
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+            Awaiting Quiz
+          </span>
+        )}
       </div>
 
-      <div className="mt-5 divide-y divide-border">
-        {visiblePaths.map((path) => (
-          <div
-            key={path.title}
-            className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
-          >
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
-              <GraduationCap className="h-4 w-4" />
-            </span>
+      {visiblePaths.length > 0 ? (
+        <>
+          <div className="mt-5 divide-y divide-border">
+            {visiblePaths.map((path) => (
+              <div
+                key={path.title}
+                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+              >
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                  <GraduationCap className="h-4 w-4" />
+                </span>
 
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-foreground">
-                {path.title}
-              </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-foreground">
+                    {path.title}
+                  </p>
 
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {path.track} · {path.duration} · {path.provider}
-              </p>
-            </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {path.track} · {path.duration} · {path.provider}
+                  </p>
+                </div>
 
-            <span className="shrink-0 text-xs font-bold text-accent">
-              {path.rating}
-            </span>
+                <a
+                  href={path.courseUrl || "https://igotkarmayogi.gov.in"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-accent-foreground transition hover:bg-accent/90"
+                >
+                  Open
+                </a>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="mt-4 border-t border-border pt-4">
-        <Link
-          to="/learning-paths"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
-        >
-          View All Learning Paths
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
+          <div className="mt-4 border-t border-border pt-4">
+            <Link
+              to="/learning-paths"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
+            >
+              View All Learning Paths
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </>
+      ) : (
+        <div className="mt-5 flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 py-8 text-center">
+          <GraduationCap className="h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm font-semibold text-muted-foreground">
+            No course recommendations yet
+          </p>
+          <p className="max-w-xs text-xs text-muted-foreground">
+            Complete the assessment quiz to measure your skill gaps and unlock targeted government courses.
+          </p>
+          <Link
+            to="/ai-assessment-quiz"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-accent-foreground hover:bg-accent/90"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Take AI Assessment Quiz
+          </Link>
+        </div>
+      )}
     </section>
   );
 }

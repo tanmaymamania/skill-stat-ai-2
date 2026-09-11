@@ -459,7 +459,13 @@ const mockSkillGapDomains: SkillGapDomain[] = [
 ];
 
 export function getSkillGapSummaries() {
-  return mockSkillGapSummaries;
+  if (typeof window !== "undefined") {
+    const session = localStorage.getItem("user_assessed_gap");
+    if (session) {
+      return mockSkillGapSummaries;
+    }
+  }
+  return [];
 }
 
 export function getSkillGapRows(): SkillGapRow[] {
@@ -472,8 +478,13 @@ export function getSkillGapRows(): SkillGapRow[] {
         // Fallback to default
       }
     }
+    // Only show mock gap rows if the user has completed an assessment
+    const session = localStorage.getItem("user_assessed_gap");
+    if (session) {
+      return mockSkillGapRows;
+    }
   }
-  return mockSkillGapRows;
+  return [];
 }
 
 export function saveSkillGapRows(rows: SkillGapRow[]) {
@@ -483,7 +494,13 @@ export function saveSkillGapRows(rows: SkillGapRow[]) {
 }
 
 export function getSkillGapDomains() {
-  return mockSkillGapDomains;
+  if (typeof window !== "undefined") {
+    const session = localStorage.getItem("user_assessed_gap");
+    if (session) {
+      return mockSkillGapDomains;
+    }
+  }
+  return [];
 }
 
 export function getPriorityGapCount(): number {
@@ -498,13 +515,15 @@ const mockLearningRecommendations: LearningPathRecommendation[] = [
     title: "Python for Official Statistics",
     description:
       "Build practical Python skills for statistical data processing, analysis, and automation.",
-    provider: "iGOT",
+    provider: "iGOT Karmayogi",
     category: "Technical",
     duration: "8 hours",
     skills: ["Python", "Data Analysis", "Automation"],
     status: "Recommended",
     progress: 0,
     priority: "High",
+    whyRecommended: "Addresses verified gap in survey automated data cleaning.",
+    courseUrl: "https://igotkarmayogi.gov.in",
   },
   {
     id: 2,
@@ -518,34 +537,38 @@ const mockLearningRecommendations: LearningPathRecommendation[] = [
     status: "Recommended",
     progress: 0,
     priority: "High",
+    whyRecommended: "Required to align micro-data with national statistical standards.",
+    courseUrl: "https://igotkarmayogi.gov.in",
   },
   {
     id: 3,
     title: "SQL for Data Management",
     description:
       "Develop practical SQL capabilities for querying, transforming, and managing statistical datasets.",
-    provider: "iGOT",
+    provider: "iGOT Karmayogi",
     category: "Technical",
     duration: "5 hours",
     skills: ["SQL", "Data Management"],
-    // [FIXED]: Initialized clean instead of hardcoded 42% In Progress
     status: "Recommended",
     progress: 0,
     priority: "Medium",
+    whyRecommended: "Essential for querying administrative registries and surveys.",
+    courseUrl: "https://igotkarmayogi.gov.in",
   },
   {
     id: 4,
     title: "Effective Data Visualization",
     description:
       "Learn how to communicate statistical findings through clear and effective visualizations.",
-    provider: "iGOT",
+    provider: "iGOT Karmayogi",
     category: "Technical",
     duration: "4 hours",
     skills: ["Visualization", "Communication"],
-    // [FIXED]: Initialized clean instead of hardcoded 100% Completed
     status: "Recommended",
     progress: 0,
     priority: "Medium",
+    whyRecommended: "Supports dashboard presentations for departmental stakeholders.",
+    courseUrl: "https://igotkarmayogi.gov.in",
   },
 ];
 
@@ -559,8 +582,13 @@ export function getLearningRecommendations(): LearningPathRecommendation[] {
         // Fallback to default
       }
     }
+    // Only show recommendations after the user has completed an assessment
+    const session = localStorage.getItem("user_assessed_gap");
+    if (session) {
+      return mockLearningRecommendations;
+    }
   }
-  return mockLearningRecommendations;
+  return [];
 }
 
 export function saveLearningRecommendations(paths: LearningPathRecommendation[]) {
