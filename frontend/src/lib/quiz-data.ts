@@ -289,6 +289,66 @@ const mockQuestions: QuizQuestion[] = [
       "Official statistical findings should be communicated accurately and transparently, with enough context for users to interpret them appropriately.",
     competency: "Statistical Communication",
   },
+  {
+    id: 21,
+    question:
+      "In GIS spatial data analysis for socio-economic surveys, what is the purpose of joining village-level micro-data with shapefile polygon layers?",
+    options: [
+      "To enable thematic spatial visualization, district heatmaps, and geographic disparity detection.",
+      "To eliminate the need for survey sampling entirely.",
+      "To convert satellite imagery into administrative plain text files.",
+      "To double the sample size without field survey verification.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Geospatial joins integrate attribute survey micro-data with administrative spatial boundary polygons to produce spatial heatmaps, regional disaggregations, and PM Gati Shakti GIS layers.",
+    competency: "GIS & Spatial Mapping",
+  },
+  {
+    id: 22,
+    question:
+      "Under the Digital Personal Data Protection (DPDP) Act 2023, what is mandatory when handling survey respondents' personally identifiable information (PII)?",
+    options: [
+      "Obtaining informed consent, implementing purpose limitation, and masking direct identifiers in public datasets.",
+      "Publishing all respondent phone numbers and Aadhaar IDs for open public access.",
+      "Retaining unencrypted raw identification records on public cloud storage indefinitely.",
+      "Exempting all official data collection from privacy guidelines.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "The DPDP Act 2023 mandates strict purpose limitation, respondent consent, robust pseudonymisation/anonymisation, and cryptographic protection of PII in government statistical systems.",
+    competency: "Digital Data Governance",
+  },
+  {
+    id: 23,
+    question:
+      "What is the primary method used to compute Gross State Domestic Product (GSDP) at constant base year prices?",
+    options: [
+      "Deflating current price gross value added using relevant price deflators (WPI / CPI) to remove price effect.",
+      "Multiplying total population count by the national currency exchange rate.",
+      "Estimating output based solely on physical cash currency notes in circulation.",
+      "Using nominal market transaction values without any index adjustment.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Constant price GSDP estimates real economic output by using base-year weighted price indices or deflators to remove inflation/price volatility from current price Gross Value Added.",
+    competency: "National Accounts & GSDP",
+  },
+  {
+    id: 24,
+    question:
+      "Which SQL operation combines records from two survey tables based on a common respondent identifier (e.g. household_id)?",
+    options: [
+      "INNER JOIN or LEFT JOIN on household_id.",
+      "GROUP BY without aggregate functions.",
+      "DROP TABLE household_id.",
+      "ORDER BY sample_weight DESC.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "SQL JOIN operations (INNER, LEFT, FULL) link relational survey tables such as household demographic rosters and individual employment records via shared unique keys.",
+    competency: "SQL & Data Management",
+  },
 ];
 
 const mockInsights: CompetencyInsight[] = [
@@ -309,8 +369,43 @@ const mockInsights: CompetencyInsight[] = [
   },
 ];
 
-export function getQuizQuestions(): QuizQuestion[] {
-  return mockQuestions;
+/**
+ * [AI ADAPTIVE GENERATOR]:
+ * Tailors assessment questions to the officer's declared skills and cadre role.
+ */
+export function getQuizQuestions(userSkills?: string[]): QuizQuestion[] {
+  if (!userSkills || userSkills.length === 0) {
+    return mockQuestions.slice(0, 6);
+  }
+
+  const normalized = userSkills.map((s) => s.toLowerCase().trim());
+
+  // Prioritize questions matching the user's declared skills
+  const matched = mockQuestions.filter((q) => {
+    const comp = q.competency.toLowerCase();
+    return normalized.some(
+      (s) =>
+        comp.includes(s) ||
+        s.includes(comp) ||
+        (s.includes("python") && comp.includes("python")) ||
+        (s.includes("sql") && comp.includes("sql")) ||
+        (s.includes("gis") && comp.includes("gis")) ||
+        (s.includes("survey") && (comp.includes("survey") || comp.includes("sampling"))) ||
+        (s.includes("sampling") && (comp.includes("survey") || comp.includes("sampling"))) ||
+        (s.includes("quality") && comp.includes("quality")) ||
+        (s.includes("governance") && comp.includes("governance")) ||
+        (s.includes("account") && comp.includes("account")) ||
+        (s.includes("visual") && comp.includes("visual"))
+    );
+  });
+
+  if (matched.length >= 4) {
+    return matched.slice(0, 6);
+  }
+
+  // Combine matched with relevant cadre questions to always provide 5-6 questions
+  const remaining = mockQuestions.filter((q) => !matched.includes(q));
+  return [...matched, ...remaining].slice(0, 6);
 }
 
 export function getQuizInsights(): CompetencyInsight[] {

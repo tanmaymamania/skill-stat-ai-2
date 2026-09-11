@@ -16,6 +16,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { getQuizQuestions, getQuizInsights, type QuizQuestion } from "@/lib/quiz-data";
 import { getSkillGapRows, saveSkillGapRows } from "@/lib/learner-data";
+import { getCurrentUserProfile } from "@/lib/current-user";
 
 export const Route = createFileRoute("/ai-assessment-quiz")({
   component: AIAssessmentQuizPage,
@@ -34,6 +35,7 @@ type RecommendedCourse = {
 };
 
 function AIAssessmentQuizPage() {
+  const profile = useMemo(() => getCurrentUserProfile(), []);
   const [view, setView] = useState<QuizView>("quiz");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -41,7 +43,11 @@ function AIAssessmentQuizPage() {
   const [recommendedCourses, setRecommendedCourses] = useState<RecommendedCourse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const questions = useMemo(() => getQuizQuestions(), []);
+  // [AI ADAPTIVE]: Generate questions based on the officer's declared profile skills
+  const questions = useMemo(
+    () => getQuizQuestions(profile.existingSkills),
+    [profile.existingSkills]
+  );
   const insights = useMemo(() => getQuizInsights(), []);
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -245,7 +251,43 @@ function AIAssessmentQuizPage() {
         <main className="flex-1 px-4 py-6 lg:px-7 lg:py-7">
           <div className="mx-auto max-w-6xl space-y-5">
             {view === "quiz" && (
-              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <>
+                {/* [AI TAILORED HEADER]: Displays declared skills being assessed */}
+                <div className="rounded-xl border border-accent/30 bg-accent-soft/20 p-4 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-accent">
+                      <Sparkles className="h-4 w-4" />
+                      <span>AI Adaptive Assessment — Tailored to Your Declared Profile</span>
+                    </div>
+                    <Link
+                      to="/build-profile"
+                      className="text-xs font-semibold text-accent hover:underline inline-flex items-center gap-1"
+                    >
+                      Update Skills & Profile →
+                    </Link>
+                  </div>
+                  <p className="mt-1 text-xs text-foreground">
+                    Assessing <span className="font-bold">{profile.name || "Officer"}</span> ({profile.designation || "Statistical Cadre"}) across your declared competencies:
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {profile.existingSkills && profile.existingSkills.length > 0 ? (
+                      profile.existingSkills.map((s) => (
+                        <span
+                          key={s}
+                          className="rounded-md border border-accent/40 bg-card px-2.5 py-1 text-[11px] font-semibold text-accent"
+                        >
+                          ✓ {s}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground italic">
+                        Core Statistical Operations, Survey Sampling & Data Quality
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <div className="flex items-center justify-between border-b border-border pb-4">
                   <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-accent">
@@ -324,7 +366,8 @@ function AIAssessmentQuizPage() {
                   )}
                 </div>
               </div>
-            )}
+            </>
+          )}
 
             {/* [FIXED]: Results View with Dynamic Course Recommendations */}
             {view === "results" && (

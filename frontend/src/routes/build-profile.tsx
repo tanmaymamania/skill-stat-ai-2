@@ -106,40 +106,35 @@ function BuildProfilePage() {
   };
 
   const handleGenerateAssessment = () => {
-    const requiredFields: Array<[keyof ProfileData, string]> = [
-      ["name", "full name"],
-      ["designation", "designation"],
-      ["department", "department"],
-      ["currentAssignment", "current assignment"],
-      ["highestQualification", "highest qualification"],
-      ["yearsOfExperience", "years of experience"],
-    ];
-
-    for (const [field, label] of requiredFields) {
-      if (!profile[field].trim()) {
-        window.alert(`Please enter your ${label}.`);
-        return;
-      }
-    }
-
-    if (!resumeFile) {
-      window.alert("Please upload your latest resume before continuing.");
+    if (!profile.name.trim()) {
+      window.alert("Please enter your full name.");
       return;
     }
-
-    if (!workExperience.trim()) {
-      window.alert("Please describe your work experience and responsibilities.");
+    if (!profile.designation.trim()) {
+      window.alert("Please enter your designation or cadre role.");
+      return;
+    }
+    if (!profile.department.trim()) {
+      window.alert("Please enter your ministry or department.");
+      return;
+    }
+    if (existingSkills.length === 0) {
+      window.alert("Please add at least one skill you currently use so the AI can tailor your diagnostic assessment.");
       return;
     }
 
     saveCurrentUserProfile({
       ...profile,
+      currentAssignment: profile.currentAssignment.trim() || "Statistical Cadre Operations",
+      highestQualification: profile.highestQualification.trim() || "Post Graduate / Master's Degree",
+      yearsOfExperience: profile.yearsOfExperience.trim() || "3+ Years",
       existingSkills,
-      workExperience,
-      resumeFileName: resumeFile.name,
+      workExperience: workExperience.trim() || "Survey data collection, validation, analysis and official statistical reporting.",
+      resumeFileName: resumeFile ? resumeFile.name : "Statistical_Officer_Cadre_Profile.pdf",
     });
 
-    navigate({ to: "/competency-assessment" });
+    // Direct officer to AI quiz tailored to their declared skills
+    navigate({ to: "/ai-assessment-quiz" });
   };
 
   const profileItems = [
@@ -307,6 +302,43 @@ function BuildProfilePage() {
                       Add
                     </button>
                   </div>
+
+                  <div className="mt-3">
+                    <p className="text-[11px] font-medium text-muted-foreground">Suggested skills (click to add):</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {[
+                        "Survey Sampling",
+                        "Python",
+                        "SQL",
+                        "GIS & Spatial Mapping",
+                        "Data Quality",
+                        "National Accounts",
+                        "Digital Data Governance",
+                      ].map((s) => {
+                        const selected = existingSkills.some(
+                          (skill) => skill.toLowerCase() === s.toLowerCase()
+                        );
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              if (!selected) {
+                                setExistingSkills((curr) => [...curr, s]);
+                              }
+                            }}
+                            className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition ${
+                              selected
+                                ? "border-accent bg-accent-soft text-accent font-semibold"
+                                : "border-border bg-card text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                            }`}
+                          >
+                            {selected ? `✓ ${s}` : `+ ${s}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-6 border-t border-border pt-6">
@@ -332,9 +364,12 @@ function BuildProfilePage() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex items-center justify-end border-t border-border pt-6">
-                  <button type="button" onClick={handleGenerateAssessment} className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent/90">
-                    Generate Initial Assessment
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border pt-6">
+                  <p className="text-xs text-muted-foreground">
+                    Your skills will be used by the AI engine to generate your diagnostic quiz.
+                  </p>
+                  <button type="button" onClick={handleGenerateAssessment} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent/90">
+                    Save Profile & Start AI Quiz
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>

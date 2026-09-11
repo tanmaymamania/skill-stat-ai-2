@@ -24,7 +24,18 @@ function LoginPage() {
     e.preventDefault();
     if (typeof window !== "undefined") {
       localStorage.setItem("user_authenticated", "true");
-      window.location.href = "/ai-assessment-quiz";
+      const raw = localStorage.getItem("statskill.currentUserProfile");
+      let hasSkills = false;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.existingSkills) && parsed.existingSkills.length > 0) {
+            hasSkills = true;
+          }
+        } catch (err) {}
+      }
+      // Require skills profiling first so AI can assess declared competencies
+      window.location.href = hasSkills ? "/ai-assessment-quiz" : "/build-profile";
     }
   };
 
@@ -123,7 +134,17 @@ function LoginPage() {
               if (typeof window !== "undefined") {
                 localStorage.setItem("user_authenticated", "true");
                 localStorage.setItem("auth_provider", "google");
-                window.location.href = "/ai-assessment-quiz";
+                const raw = localStorage.getItem("statskill.currentUserProfile");
+                let hasSkills = false;
+                if (raw) {
+                  try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && Array.isArray(parsed.existingSkills) && parsed.existingSkills.length > 0) {
+                      hasSkills = true;
+                    }
+                  } catch (err) {}
+                }
+                window.location.href = hasSkills ? "/ai-assessment-quiz" : "/build-profile";
               }
             }}
             className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
