@@ -1,29 +1,102 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Eye, EyeOff, LockKeyhole, Mail, X, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  Sparkles,
+  User,
+  X,
+} from "lucide-react";
 import { StatSkillWordmark } from "@/components/StatSkillLogo";
+import { loginUser, registerUser, loginWithGooglePayload, parseGoogleJwt } from "@/lib/auth-service";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
 function LoginPage() {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+
+  // Form fields
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("vivek.reddy@meity.gov.in");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // UI state
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSubmitted, setResetSubmitted] = useState(false);
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (resetEmail) {
-      setResetSubmitted(true);
+  // Google Sign-in Modal for direct Google account authorization
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleEmailInput, setGoogleEmailInput] = useState("");
+  const [googleNameInput, setGoogleNameInput] = useState("");
+
+  // Initialize Google Identity Services if available on window
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+      try {
+        const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "demo-client-id.apps.googleusercontent.com";
+        (window as any).google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response: any) => {
+            if (response?.credential) {
+              const decoded = parseGoogleJwt(response.credential);
+              if (decoded?.email) {
+                handleGoogleSuccess(decoded.email, decoded.name, decoded.picture);
+              }
+            }
+          },
+        });
+      } catch (e) {
+        console.warn("Google gsi init notice:", e);
+      }
     }
+  }, []);
+
+  const handleGoogleSuccess = (googleEmail: string, googleName?: string, picture?: string) => {
+    const user = loginWithGooglePayload({
+      email: googleEmail,
+      name: googleName || googleEmail.split("@")[0],
+      picture: picture,
+    });
+
+    // Check if this Google user already has skills configured
+    const userProfileKey = "statskill_profile_" + user.email.toLowerCase();
+    const saved = localStorage.getItem(userProfileKey);
+    let hasSkills = false;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.existingSkills?.length > 0) hasSkills = true;
+      } catch {}
+    }
+
+    window.location.href = hasSkills ? "/ai-assessment-quiz" : "/build-profile";
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (typeof window !== "undefined") {
-      localStorage.setItem("user_authenticated", "true");
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (mode === "signin") {
+      // REAL PASSWORD VERIFICATION
+      const res = loginUser(email, password);
+      if (!res.success) {
+        setErrorMessage(res.error || "Login failed. Please verify your credentials.");
+        return;
+      }
+
+      // Check if user has already entered skills
       const raw = localStorage.getItem("statskill.currentUserProfile");
       let hasSkills = false;
       if (raw) {
@@ -34,52 +107,161 @@ function LoginPage() {
           }
         } catch (err) {}
       }
-      // Require skills profiling first so AI can assess declared competencies
+
       window.location.href = hasSkills ? "/ai-assessment-quiz" : "/build-profile";
+    } else {
+      // REAL REGISTRATION
+      if (!name.trim()) {
+        setErrorMessage("Please enter your full name.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMessage("Passwords do not match. Please verify your password confirmation.");
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMessage("Password must be at least 6 characters long.");
+        return;
+      }
+
+      const res = registerUser(name, email, password);
+      if (!res.success) {
+        setErrorMessage(res.error || "Registration failed.");
+        return;
+      }
+
+      // New account registered -> route to build-profile to declare skills
+      window.location.href = "/build-profile";
+    }
+  };
+
+  const fillDemoAccount = () => {
+    setMode("signin");
+    setEmail("vivek.reddy@meity.gov.in");
+    setPassword("Password@123");
+    setErrorMessage(null);
+    setSuccessMessage("Pre-filled official cadre credentials. Click Sign In below!");
+  };
+
+  const handleForgotSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (resetEmail) {
+      setResetSubmitted(true);
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
-      <div className="w-full max-w-md space-y-8 rounded-2xl border border-border bg-card p-8 shadow-sm">
+      <div className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-8 shadow-sm">
         <div className="text-center">
           <div className="flex justify-center">
             <StatSkillWordmark />
           </div>
           <h2 className="mt-6 text-2xl font-bold tracking-tight text-foreground">
-            Sign in to your account
+            {mode === "signin" ? "Sign In to Your Account" : "Create Official Account"}
           </h2>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             National Competency & Skill Intelligence Platform (MoSPI / MeitY)
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleLoginSubmit}>
-          <div className="space-y-4">
+        {/* Tab Switcher: Sign In vs Create Account */}
+        <div className="grid grid-cols-2 rounded-xl bg-muted p-1 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setErrorMessage(null);
+              setSuccessMessage(null);
+            }}
+            className={`rounded-lg py-2 transition ${
+              mode === "signin"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signup");
+              setErrorMessage(null);
+              setSuccessMessage(null);
+              if (email === "vivek.reddy@meity.gov.in") setEmail("");
+              setPassword("");
+            }}
+            className={`rounded-lg py-2 transition ${
+              mode === "signup"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Create Account
+          </button>
+        </div>
+
+        {/* Error Banner on Wrong Password or Validation Error */}
+        {errorMessage && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <p className="font-semibold">{errorMessage}</p>
+          </div>
+        )}
+
+        {/* Success / Notification Banner */}
+        {successMessage && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-success/20 bg-success/10 p-3 text-xs text-success">
+            <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+            <p className="font-semibold">{successMessage}</p>
+          </div>
+        )}
+
+        <form className="space-y-4" onSubmit={handleFormSubmit}>
+          {mode === "signup" && (
             <div>
-              <label htmlFor="email" className="text-sm font-semibold text-foreground">
-                Official Email
+              <label htmlFor="name" className="text-xs font-semibold text-foreground">
+                Full Name
               </label>
-              <div className="relative mt-2">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <div className="relative mt-1.5">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  defaultValue="vivek.reddy@meity.gov.in"
-                  placeholder="you@example.gov.in"
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Tanmay Mamania"
                   required
-                  className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/10"
+                  className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
                 />
               </div>
             </div>
+          )}
 
-            <div>
-              <div className="flex items-center justify-between gap-4">
-                <label htmlFor="password" className="text-sm font-semibold text-foreground">
-                  Password
-                </label>
-                {/* [FIXED]: Working Forgot Password Button */}
+          <div>
+            <label htmlFor="email" className="text-xs font-semibold text-foreground">
+              Official Email Address
+            </label>
+            <div className="relative mt-1.5">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="officer@nic.in or your.email@gmail.com"
+                required
+                className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-4">
+              <label htmlFor="password" className="text-xs font-semibold text-foreground">
+                Password
+              </label>
+              {mode === "signin" && (
                 <button
                   type="button"
                   onClick={() => {
@@ -90,64 +272,91 @@ function LoginPage() {
                 >
                   Forgot Password?
                 </button>
-              </div>
-              <div className="relative mt-2">
-                <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  defaultValue="••••••••"
-                  required
-                  className="w-full rounded-lg border border-border bg-background py-3 pl-10 pr-12 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              )}
+            </div>
+            <div className="relative mt-1.5">
+              <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === "signup" ? "Create password (min 6 chars)" : "Enter account password"}
+                required
+                className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-12 text-xs text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 
+          {mode === "signup" && (
+            <div>
+              <label htmlFor="confirmPassword" className="text-xs font-semibold text-foreground">
+                Confirm Password
+              </label>
+              <div className="relative mt-1.5">
+                <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  required
+                  className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="flex w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+            className="mt-2 flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
           >
-            Sign In
+            {mode === "signin" ? "Sign In" : "Register & Set Up Profile"}
           </button>
 
-          <div className="flex items-center gap-4 pt-2">
+          {mode === "signin" && (
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={fillDemoAccount}
+                className="text-[11px] text-accent hover:underline inline-flex items-center gap-1 font-medium"
+              >
+                <Sparkles className="h-3 w-3" /> Quick fill Demo Account (vivek.reddy / Password@123)
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-4 pt-1">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              or
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              or connect with
             </span>
             <span className="h-px flex-1 bg-border" />
           </div>
 
+          {/* Actual Google Account Sign In Button */}
           <button
             type="button"
             onClick={() => {
-              if (typeof window !== "undefined") {
-                localStorage.setItem("user_authenticated", "true");
-                localStorage.setItem("auth_provider", "google");
-                const raw = localStorage.getItem("statskill.currentUserProfile");
-                let hasSkills = false;
-                if (raw) {
-                  try {
-                    const parsed = JSON.parse(raw);
-                    if (parsed && Array.isArray(parsed.existingSkills) && parsed.existingSkills.length > 0) {
-                      hasSkills = true;
-                    }
-                  } catch (err) {}
-                }
-                window.location.href = hasSkills ? "/ai-assessment-quiz" : "/build-profile";
+              // If native Google Identity GIS is initialized, trigger prompt
+              if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+                try {
+                  (window as any).google.accounts.id.prompt();
+                } catch {}
               }
+              // Open modal to sign in with your real Google email
+              setShowGoogleModal(true);
             }}
-            className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path
@@ -167,22 +376,138 @@ function LoginPage() {
                 fill="#EA4335"
               />
             </svg>
-            Sign in with Google
+            Sign in with Google Account
           </button>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
-          Don't have an account?{" "}
-          <a
-            href="/build-profile"
-            className="font-semibold text-accent hover:underline"
-          >
-            Sign up
-          </a>
+          {mode === "signin" ? (
+            <>
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signup");
+                  setErrorMessage(null);
+                }}
+                className="font-semibold text-accent hover:underline"
+              >
+                Sign up
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signin");
+                  setErrorMessage(null);
+                }}
+                className="font-semibold text-accent hover:underline"
+              >
+                Sign in
+              </button>
+            </>
+          )}
         </p>
       </div>
 
-      {/* [FIXED]: Functional Forgot Password Modal */}
+      {/* Google Account Authentication Modal */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <svg className="h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                <h3 className="text-sm font-bold text-foreground">Sign In with Google</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGoogleModal(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!googleEmailInput.trim() || !googleEmailInput.includes("@")) {
+                  alert("Please enter a valid Google Account email.");
+                  return;
+                }
+                setShowGoogleModal(false);
+                handleGoogleSuccess(googleEmailInput.trim(), googleNameInput.trim());
+              }}
+              className="mt-4 space-y-3"
+            >
+              <p className="text-xs text-muted-foreground">
+                Enter your Google Account email. All your competency assessment scores, skill gaps, and learning paths will remain permanently saved to this account.
+              </p>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground">Google Account Email</label>
+                <input
+                  type="email"
+                  required
+                  value={googleEmailInput}
+                  onChange={(e) => setGoogleEmailInput(e.target.value)}
+                  placeholder="your.name@gmail.com"
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground">Account Name (Optional)</label>
+                <input
+                  type="text"
+                  value={googleNameInput}
+                  onChange={(e) => setGoogleNameInput(e.target.value)}
+                  placeholder="e.g. Tanmay Mamania"
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleModal(false)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  Continue with Google
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot Password Modal */}
       {showForgotModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
@@ -200,10 +525,10 @@ function LoginPage() {
             {!resetSubmitted ? (
               <form onSubmit={handleForgotSubmit} className="mt-4 space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  Enter your official email address. An OTP or password reset link will be sent to your verified government inbox.
+                  Enter your official email address. An OTP or password reset link will be sent to your verified inbox.
                 </p>
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Government Email ID</label>
+                  <label className="text-xs font-semibold text-foreground">Email Address</label>
                   <input
                     type="email"
                     required

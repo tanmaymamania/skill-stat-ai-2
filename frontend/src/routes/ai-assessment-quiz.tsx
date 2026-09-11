@@ -17,6 +17,7 @@ import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { getQuizQuestions, getQuizInsights, type QuizQuestion } from "@/lib/quiz-data";
 import { getSkillGapRows, saveSkillGapRows } from "@/lib/learner-data";
 import { getCurrentUserProfile } from "@/lib/current-user";
+import { syncActiveUserAssessmentHistory } from "@/lib/auth-service";
 
 export const Route = createFileRoute("/ai-assessment-quiz")({
   component: AIAssessmentQuizPage,
@@ -236,6 +237,9 @@ function AIAssessmentQuizPage() {
       );
       localStorage.setItem("active_learning_paths", JSON.stringify(targetedPaths));
     }
+
+    // Persist assessment scores, gaps, and learning paths to the active user's permanent account
+    syncActiveUserAssessmentHistory();
 
     setIsSubmitting(false);
     setView("results");
