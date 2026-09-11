@@ -34,6 +34,8 @@ type RecommendedCourse = {
   description: string;
   reason: string;
   difficulty_level: number;
+  category?: string;
+  skills?: string[];
 };
 
 function AIAssessmentQuizPage() {
@@ -65,10 +67,146 @@ function AIAssessmentQuizPage() {
     setAnswers((prev) => ({ ...prev, [currentQuestion.id]: optionIndex }));
   };
 
-  /* [FIXED]: Handles Real Submission, Skill Gap Updating & Course Recommendations */
+  /* [FIXED]: Handles Real Submission, Skill Gap Updating & Dynamic Gap-Driven Course Recommendations */
   const handleSubmit = async () => {
     setIsSubmitting(true);
     let coursesToDisplay: RecommendedCourse[] = [];
+
+    // 1. Calculate accuracy and performance per tested competency
+    const competencyStats: Record<string, { total: number; correct: number }> = {};
+    questions.forEach((q) => {
+      const comp = q.competency;
+      if (!competencyStats[comp]) competencyStats[comp] = { total: 0, correct: 0 };
+      competencyStats[comp].total++;
+      if (answers[q.id] === q.correctAnswer) {
+        competencyStats[comp].correct++;
+      }
+    });
+
+    const getEmpiricalLevel = (
+      compSubstring: string,
+      fallbackRatio: number
+    ): { level: number; label: string } => {
+      const key = Object.keys(competencyStats).find((k) =>
+        k.toLowerCase().includes(compSubstring.toLowerCase())
+      );
+      const ratio =
+        key && competencyStats[key].total > 0
+          ? competencyStats[key].correct / competencyStats[key].total
+          : fallbackRatio;
+
+      if (ratio >= 0.75) return { level: 4, label: "Advanced" };
+      if (ratio >= 0.5) return { level: 3, label: "Intermediate" };
+      if (ratio >= 0.25) return { level: 2, label: "Foundational" };
+      return { level: 1, label: "Novice" };
+    };
+
+    const overallRatio = questions.length > 0 ? correctCount / questions.length : 0.5;
+    const samplingLvl = getEmpiricalLevel("sampling", overallRatio);
+    const pythonLvl = getEmpiricalLevel("python", overallRatio);
+    const gisLvl = getEmpiricalLevel("gis", overallRatio);
+    const nationalLvl = getEmpiricalLevel("national", overallRatio);
+    const qualityLvl = getEmpiricalLevel("quality", overallRatio);
+    const governanceLvl = getEmpiricalLevel("governance", overallRatio);
+
+    const assessedGaps: SkillGapRow[] = [
+      {
+        skill: "Survey Design & Sampling",
+        category: "Statistical",
+        description: "Survey design, stratification and sampling estimation",
+        currentLevel: samplingLvl.level,
+        currentLabel: samplingLvl.label,
+        requiredLevel: 4,
+        requiredLabel: "Advanced",
+        gap: Math.max(0, 4 - samplingLvl.level),
+        priority:
+          4 - samplingLvl.level >= 2
+            ? "High"
+            : 4 - samplingLvl.level === 1
+              ? "Moderate"
+              : "Low",
+      },
+      {
+        skill: "Python for Statistical Computing",
+        category: "Technical",
+        description: "Pandas, NumPy, automated data validation and processing",
+        currentLevel: pythonLvl.level,
+        currentLabel: pythonLvl.label,
+        requiredLevel: 4,
+        requiredLabel: "Advanced",
+        gap: Math.max(0, 4 - pythonLvl.level),
+        priority:
+          4 - pythonLvl.level >= 2
+            ? "High"
+            : 4 - pythonLvl.level === 1
+              ? "Moderate"
+              : "Low",
+      },
+      {
+        skill: "GIS & Spatial Data Analysis",
+        category: "Technical",
+        description: "QGIS, spatial mapping and geospatial micro-data analysis",
+        currentLevel: gisLvl.level,
+        currentLabel: gisLvl.label,
+        requiredLevel: 3,
+        requiredLabel: "Intermediate",
+        gap: Math.max(0, 3 - gisLvl.level),
+        priority:
+          3 - gisLvl.level >= 2
+            ? "High"
+            : 3 - gisLvl.level === 1
+              ? "Moderate"
+              : "Low",
+      },
+      {
+        skill: "National Accounts & GSDP Estimation",
+        category: "Statistical",
+        description: "National accounts concepts, price indices and state estimation methods",
+        currentLevel: nationalLvl.level,
+        currentLabel: nationalLvl.label,
+        requiredLevel: 4,
+        requiredLabel: "Advanced",
+        gap: Math.max(0, 4 - nationalLvl.level),
+        priority:
+          4 - nationalLvl.level >= 2
+            ? "High"
+            : 4 - nationalLvl.level === 1
+              ? "Moderate"
+              : "Low",
+      },
+      {
+        skill: "Statistical Data Quality & Validation",
+        category: "Statistical",
+        description: "NQAF standards, consistency rules, and modern imputation",
+        currentLevel: qualityLvl.level,
+        currentLabel: qualityLvl.label,
+        requiredLevel: 4,
+        requiredLabel: "Advanced",
+        gap: Math.max(0, 4 - qualityLvl.level),
+        priority:
+          4 - qualityLvl.level >= 2
+            ? "High"
+            : 4 - qualityLvl.level === 1
+              ? "Moderate"
+              : "Low",
+      },
+      {
+        skill: "Digital Data Governance",
+        category: "Governance",
+        description: "Data privacy, DPDP Act 2023, and government data standards",
+        currentLevel: governanceLvl.level,
+        currentLabel: governanceLvl.label,
+        requiredLevel: 3,
+        requiredLabel: "Intermediate",
+        gap: Math.max(0, 3 - governanceLvl.level),
+        priority:
+          3 - governanceLvl.level >= 2
+            ? "High"
+            : 3 - governanceLvl.level === 1
+              ? "Moderate"
+              : "Low",
+      },
+    ];
 
     try {
       const formattedAnswers = Object.entries(answers).map(([qId, opt]) => ({
@@ -76,7 +214,7 @@ function AIAssessmentQuizPage() {
         selected_option: opt,
       }));
 
-      // 1. Call Backend API
+      // 2. Call Backend API if available
       const res = await fetch("http://127.0.0.1:8000/submit-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,53 +234,163 @@ function AIAssessmentQuizPage() {
       console.warn("Backend offline, applying client-side adaptive calculation:", e);
     }
 
-    // 2. Client-side adaptive fallback if backend is running separately
+    // 3. Client-side adaptive gap engine: Recommend 2 distinct courses matching top deficit competencies
     if (coursesToDisplay.length === 0) {
-      if (score >= 80) {
+      const competencyCoursesCatalog: Record<
+        string,
+        {
+          course_id: string;
+          name: string;
+          provider: string;
+          category: string;
+          duration_hours: number;
+          description: string;
+          reasonPrefix: string;
+          skills: string[];
+          difficulty_level: number;
+        }
+      > = {
+        "Survey Design & Sampling": {
+          course_id: "sd-301",
+          name: "Survey Sampling Methodology & Field Audits",
+          provider: "MoSPI / NSSTA",
+          category: "Statistical",
+          duration_hours: 15,
+          description: "Stratified multistage sampling, design effects, and sample weight calibrations.",
+          reasonPrefix: "Closes assessed foundational deficit in Survey Design & Sampling.",
+          skills: ["Sampling Theory", "Stratification", "Sample Weighting", "Field Audits"],
+          difficulty_level: 3,
+        },
+        "Python for Statistical Computing": {
+          course_id: "py-302",
+          name: "Python for Official Statistics & Microdata Pipelines",
+          provider: "iGOT Karmayogi / NPTEL",
+          category: "Technical",
+          duration_hours: 18,
+          description: "Applied Python, Pandas DataFrames, and NumPy for national survey microdata pipelines.",
+          reasonPrefix: "Directly bridges your assessed Python programming gap to cadre Level 4 standard.",
+          skills: ["Python", "Pandas", "NumPy", "Microdata Pipelines"],
+          difficulty_level: 3,
+        },
+        "GIS & Spatial Data Analysis": {
+          course_id: "gis-201",
+          name: "Spatial Analytics & GIS for District Statistics",
+          provider: "ISRO / MoSPI GIS Lab",
+          category: "Technical",
+          duration_hours: 14,
+          description: "Geospatial boundary mapping, QGIS raster & vector processing for regional reporting.",
+          reasonPrefix: "Addresses identified gap in spatial data analysis and district boundary integration.",
+          skills: ["QGIS", "Spatial Analytics", "Boundary Mapping", "Thematic Cartography"],
+          difficulty_level: 3,
+        },
+        "National Accounts & GSDP Estimation": {
+          course_id: "na-401",
+          name: "SNA Framework & Macroeconomic Indicator Compilation",
+          provider: "Central Statistics Office / UN-SD",
+          category: "Statistical",
+          duration_hours: 20,
+          description: "System of National Accounts (SNA), deflators, GVA computation, and GDP revisions.",
+          reasonPrefix: "Bridges macroeconomic accounts compilation and index estimation gap.",
+          skills: ["National Accounts", "SNA 2008", "GSDP Deflators", "Price Indices"],
+          difficulty_level: 4,
+        },
+        "Statistical Data Quality & Validation": {
+          course_id: "dq-305",
+          name: "Statistical Data Quality Assurance & Imputation Frameworks",
+          provider: "MoSPI Data Innovation Lab",
+          category: "Statistical",
+          duration_hours: 12,
+          description: "UN NQAF data quality assurance, logical audit rules, outlier detection, and donor imputation.",
+          reasonPrefix: "Closes gap in automated data validation and statistical consistency checks.",
+          skills: ["UN NQAF", "Data Imputation", "Validation Rules", "Audit Trails"],
+          difficulty_level: 3,
+        },
+        "Digital Data Governance": {
+          course_id: "gov-204",
+          name: "Digital Data Governance & Statistical Ethics",
+          provider: "NSSTA / NITI Aayog",
+          category: "Governance",
+          duration_hours: 10,
+          description: "DPDP Act compliance, statistical confidentiality, microdata anonymization, and public dissemination.",
+          reasonPrefix: "Builds essential compliance, DPDP Act 2023, and data protection competencies.",
+          skills: ["Data Governance", "DPDP Act 2023", "Anonymization", "Cadre Ethics"],
+          difficulty_level: 2,
+        },
+      };
+
+      if (score >= 90) {
+        // High performer: Recommend two distinct Level 5 advanced executive courses
         coursesToDisplay = [
           {
             course_id: "sd-501",
             name: "National Survey Methodology Architecture & Masterclass",
             provider: "MoSPI / UN-DESA",
+            category: "Statistical",
             duration_hours: 24,
-            description: "Designing national statistical frameworks and global data standards.",
+            description: "Designing national statistical frameworks, UN-DESA standards, and multi-round microdata integration.",
             reason: "Master Level 5 executive competencies to exceed cadre benchmarks.",
             difficulty_level: 5,
+            skills: ["Advanced Survey Architecture", "UN Standards", "Executive Oversight"],
+          },
+          {
+            course_id: "ml-502",
+            name: "High-Frequency Economic Nowcasting & Statistical Machine Learning",
+            provider: "MoSPI Innovation Cell",
+            category: "Technical",
+            duration_hours: 22,
+            description: "Advanced predictive modeling, high-frequency GST/satellite data integration, and nowcasting macroeconomic trends.",
+            reason: "Directly advances frontier statistical computing skills for senior technical cadre.",
+            difficulty_level: 5,
+            skills: ["Machine Learning", "Nowcasting", "Predictive Analytics"],
           },
         ];
       } else {
-        coursesToDisplay = [
-          {
-            course_id: "sd-301",
-            name: "Independent Survey Sampling & Methodology",
-            provider: "MoSPI / iGOT",
+        // Sort evaluated gaps descending to pick top 2 distinct areas
+        const sortedByGap = [...assessedGaps].sort((a, b) => {
+          if (b.gap !== a.gap) return b.gap - a.gap;
+          return a.currentLevel - b.currentLevel;
+        });
+
+        // Pick top 2 distinct competencies
+        const topSkills = sortedByGap.slice(0, 2);
+
+        coursesToDisplay = topSkills.map((gapItem) => {
+          const catalogEntry = competencyCoursesCatalog[gapItem.skill] || {
+            course_id: "cadre-300",
+            name: `${gapItem.skill} Professional Competency`,
+            provider: "iGOT Karmayogi",
+            category: gapItem.category,
             duration_hours: 15,
-            description: "Stratified random sampling, questionnaire validation, and survey execution.",
-            reason: "Bridges gap from Level 2 to 4 by mastering Level 3 practical competencies.",
-            difficulty_level: 3,
-          },
-          {
-            course_id: "sd-401",
-            name: "NSS Survey Methodology & Multi-Region Design",
-            provider: "MoSPI",
-            duration_hours: 20,
-            description: "Nationwide survey design, multi-stage sampling frames, and quality audits.",
-            reason: "Bridges gap to Level 4 required for Statistical Officer cadre.",
-            difficulty_level: 4,
-          },
-        ];
+            description: `Comprehensive training in ${gapItem.skill} for official statistical cadres.`,
+            reasonPrefix: `Addresses assessed Level ${gapItem.currentLevel} gap against required Level ${gapItem.requiredLevel}.`,
+            skills: [gapItem.skill],
+            difficulty_level: gapItem.requiredLevel,
+          };
+
+          return {
+            course_id: catalogEntry.course_id,
+            name: catalogEntry.name,
+            provider: catalogEntry.provider,
+            category: catalogEntry.category,
+            duration_hours: catalogEntry.duration_hours,
+            description: catalogEntry.description,
+            reason: `${catalogEntry.reasonPrefix} Current Level ${gapItem.currentLevel} vs Target Level ${gapItem.requiredLevel}.`,
+            difficulty_level: catalogEntry.difficulty_level,
+            skills: catalogEntry.skills,
+          };
+        });
       }
     }
 
     setRecommendedCourses(coursesToDisplay);
 
-    // 3. [FIXED]: Dynamically save assessment result, measured skill gaps, and courses to storage
+    // 4. Dynamically save assessment result, measured skill gaps, and courses to storage
     const evaluatedLevel = score >= 80 ? 4 : score >= 60 ? 3 : 2;
     const requiredLevel = 4;
     const calculatedGap = evaluatedLevel - requiredLevel;
 
     if (typeof window !== "undefined") {
-      // 3a. Save official assessment score and verified level
+      // 4a. Save official assessment score and verified level
       localStorage.setItem(
         "user_assessed_gap",
         JSON.stringify({
@@ -155,153 +403,19 @@ function AIAssessmentQuizPage() {
         })
       );
 
-      // 3b. [EMPIRICAL AUTOMATED GAP ENGINE]: Calculate accuracy per tested competency
-      const competencyStats: Record<string, { total: number; correct: number }> = {};
-      questions.forEach((q) => {
-        const comp = q.competency;
-        if (!competencyStats[comp]) competencyStats[comp] = { total: 0, correct: 0 };
-        competencyStats[comp].total++;
-        if (answers[q.id] === q.correctAnswer) {
-          competencyStats[comp].correct++;
-        }
-      });
-
-      const getEmpiricalLevel = (
-        compSubstring: string,
-        fallbackRatio: number
-      ): { level: number; label: string } => {
-        const key = Object.keys(competencyStats).find((k) =>
-          k.toLowerCase().includes(compSubstring.toLowerCase())
-        );
-        const ratio =
-          key && competencyStats[key].total > 0
-            ? competencyStats[key].correct / competencyStats[key].total
-            : fallbackRatio;
-
-        if (ratio >= 0.75) return { level: 4, label: "Advanced" };
-        if (ratio >= 0.5) return { level: 3, label: "Intermediate" };
-        if (ratio >= 0.25) return { level: 2, label: "Foundational" };
-        return { level: 1, label: "Novice" };
-      };
-
-      const overallRatio = questions.length > 0 ? correctCount / questions.length : 0.5;
-      const samplingLvl = getEmpiricalLevel("sampling", overallRatio);
-      const pythonLvl = getEmpiricalLevel("python", overallRatio);
-      const gisLvl = getEmpiricalLevel("gis", overallRatio);
-      const nationalLvl = getEmpiricalLevel("national", overallRatio);
-      const qualityLvl = getEmpiricalLevel("quality", overallRatio);
-      const governanceLvl = getEmpiricalLevel("governance", overallRatio);
-
-      const assessedGaps: SkillGapRow[] = [
-        {
-          skill: "Survey Design & Sampling",
-          category: "Statistical",
-          description: "Survey design, stratification and sampling estimation",
-          currentLevel: samplingLvl.level,
-          currentLabel: samplingLvl.label,
-          requiredLevel: 4,
-          requiredLabel: "Advanced",
-          gap: Math.max(0, 4 - samplingLvl.level),
-          priority:
-            4 - samplingLvl.level >= 2
-              ? "High"
-              : 4 - samplingLvl.level === 1
-                ? "Moderate"
-                : "Low",
-        },
-        {
-          skill: "Python for Statistical Computing",
-          category: "Technical",
-          description: "Pandas, NumPy, automated data validation and processing",
-          currentLevel: pythonLvl.level,
-          currentLabel: pythonLvl.label,
-          requiredLevel: 4,
-          requiredLabel: "Advanced",
-          gap: Math.max(0, 4 - pythonLvl.level),
-          priority:
-            4 - pythonLvl.level >= 2
-              ? "High"
-              : 4 - pythonLvl.level === 1
-                ? "Moderate"
-                : "Low",
-        },
-        {
-          skill: "GIS & Spatial Data Analysis",
-          category: "Technical",
-          description: "QGIS, spatial mapping and geospatial micro-data analysis",
-          currentLevel: gisLvl.level,
-          currentLabel: gisLvl.label,
-          requiredLevel: 3,
-          requiredLabel: "Intermediate",
-          gap: Math.max(0, 3 - gisLvl.level),
-          priority:
-            3 - gisLvl.level >= 2
-              ? "High"
-              : 3 - gisLvl.level === 1
-                ? "Moderate"
-                : "Low",
-        },
-        {
-          skill: "National Accounts & GSDP Estimation",
-          category: "Statistical",
-          description: "National accounts concepts, price indices and state estimation methods",
-          currentLevel: nationalLvl.level,
-          currentLabel: nationalLvl.label,
-          requiredLevel: 4,
-          requiredLabel: "Advanced",
-          gap: Math.max(0, 4 - nationalLvl.level),
-          priority:
-            4 - nationalLvl.level >= 2
-              ? "High"
-              : 4 - nationalLvl.level === 1
-                ? "Moderate"
-                : "Low",
-        },
-        {
-          skill: "Statistical Data Quality & Validation",
-          category: "Statistical",
-          description: "NQAF standards, consistency rules, and modern imputation",
-          currentLevel: qualityLvl.level,
-          currentLabel: qualityLvl.label,
-          requiredLevel: 4,
-          requiredLabel: "Advanced",
-          gap: Math.max(0, 4 - qualityLvl.level),
-          priority:
-            4 - qualityLvl.level >= 2
-              ? "High"
-              : 4 - qualityLvl.level === 1
-                ? "Moderate"
-                : "Low",
-        },
-        {
-          skill: "Digital Data Governance",
-          category: "Governance",
-          description: "Data privacy, DPDP Act 2023, and government data standards",
-          currentLevel: governanceLvl.level,
-          currentLabel: governanceLvl.label,
-          requiredLevel: 3,
-          requiredLabel: "Intermediate",
-          gap: Math.max(0, 3 - governanceLvl.level),
-          priority:
-            3 - governanceLvl.level >= 2
-              ? "High"
-              : 3 - governanceLvl.level === 1
-                ? "Moderate"
-                : "Low",
-        },
-      ];
+      // 4b. Save assessed skill gap matrix
       saveSkillGapRows(assessedGaps);
 
-      // 3c. Save personalized recommended courses measuring the gap
+      // 4c. Save personalized recommended courses measuring the gap with distinct categories & skills
       const targetedPaths: LearningPathRecommendation[] = coursesToDisplay.map(
         (c, idx) => ({
           id: idx + 1,
           title: c.name,
           description: c.description,
           provider: c.provider,
-          category: "Technical",
+          category: c.category || "Technical",
           duration: `${c.duration_hours} hours`,
-          skills: ["Survey Design", "Data Analysis", "Automation"],
+          skills: c.skills || ["Survey Design", "Data Analysis"],
           status: "Recommended",
           progress: 0,
           priority: c.difficulty_level >= 4 ? "High" : "Medium",
@@ -514,6 +628,8 @@ function AIAssessmentQuizPage() {
                                 provider: c.provider,
                                 description: c.description,
                                 duration: `${c.duration_hours} Hours`,
+                                category: c.category || "Statistical",
+                                skills: c.skills || ["Applied Cadre Competency"],
                                 whyRecommended: c.reason,
                                 priority: c.difficulty_level >= 4 ? "High" : "Medium",
                               })
@@ -531,6 +647,8 @@ function AIAssessmentQuizPage() {
                                 provider: c.provider,
                                 description: c.description,
                                 duration: `${c.duration_hours} Hours`,
+                                category: c.category || "Statistical",
+                                skills: c.skills || ["Applied Cadre Competency"],
                                 whyRecommended: c.reason,
                                 priority: c.difficulty_level >= 4 ? "High" : "Medium",
                               })
