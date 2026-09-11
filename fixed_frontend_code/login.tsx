@@ -20,6 +20,14 @@ function LoginPage() {
     }
   };
 
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user_authenticated", "true");
+      window.location.href = "/dashboard";
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
       <div className="w-full max-w-md space-y-8 rounded-2xl border border-border bg-card p-8 shadow-sm">
@@ -35,7 +43,7 @@ function LoginPage() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={(e) => e.preventDefault()}>
+        <form className="mt-8 space-y-6" onSubmit={handleLoginSubmit}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="text-sm font-semibold text-foreground">
