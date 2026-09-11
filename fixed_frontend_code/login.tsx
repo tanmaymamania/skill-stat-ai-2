@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail, X, CheckCircle2 } from "lucide-react";
-import { StatSkillWordmark } from "@/components/brand/StatSkillLogo";
+import { StatSkillWordmark } from "@/components/StatSkillLogo";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,

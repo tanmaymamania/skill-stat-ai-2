@@ -14,7 +14,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { StatSkillWordmark } from "@/components/brand/StatSkillLogo";
+import { StatSkillWordmark } from "@/components/StatSkillLogo";
 import { getPriorityGapCount } from "@/lib/learner-data";
 import { cn } from "@/lib/utils";
 
