@@ -85,116 +85,224 @@ export type CompetencyAssessmentState = {
 
 /* ---------------- Dashboard ---------------- */
 
-const mockSummaryStats: DashboardSummaryStat[] = [
-  {
-    label: "Overall Competency",
-    tag: "+6%",
-    tagTone: "success",
-    value: "74%",
-    valueNote: "Level 3 Proficient",
-    footnote: "DES State Average: 68%",
-    progress: 74,
-  },
-  {
-    label: "Learning Progress",
-    tag: "On Track",
-    tagTone: "success",
-    value: "68%",
-    valueNote: "across active tracks",
-    footnote: "Blended NSSTA & iGOT modules",
-    progress: 68,
-  },
-  {
-    label: "Total Learning Hours",
-    tag: "Logged",
-    tagTone: "neutral",
-    value: "42.5",
-    valueNote: "hrs",
-    footnote: "Logged this fiscal year (Target: 50 hrs)",
-    progress: 85,
-  },
-  {
-    label: "Active Paths",
-    tag: "In Progress",
-    tagTone: "accent",
-    value: "2",
-    valueNote: "tracks in remedial",
-    footnote: "Python Automation & GIS Spatial",
-    progress: 50,
-  },
-];
+export function getSummaryStats(): DashboardSummaryStat[] {
+  if (typeof window !== "undefined") {
+    const session = localStorage.getItem("user_assessed_gap");
+    if (session) {
+      try {
+        const data = JSON.parse(session);
+        const scorePct = data.score?.percentage ?? 80;
+        return [
+          {
+            label: "Overall Competency",
+            tag: "Verified",
+            tagTone: "success",
+            value: `${scorePct}%`,
+            valueNote: `Level ${data.current_level} Verified`,
+            footnote: "Empirical score from AI Quiz Engine",
+            progress: scorePct,
+          },
+          {
+            label: "Learning Progress",
+            tag: "Active",
+            tagTone: "accent",
+            value: "25%",
+            valueNote: "learning path started",
+            footnote: "Targeted iGOT remediation active",
+            progress: 25,
+          },
+          {
+            label: "Total Learning Hours",
+            tag: "Logged",
+            tagTone: "neutral",
+            value: "2.0",
+            valueNote: "hrs",
+            footnote: "Logged this fiscal year (Target: 50 hrs)",
+            progress: 4,
+          },
+          {
+            label: "Active Paths",
+            tag: "In Progress",
+            tagTone: "accent",
+            value: "1",
+            valueNote: "track recommended",
+            footnote: `${data.skill} Remedial Course`,
+            progress: 25,
+          },
+        ];
+      } catch (e) {
+        // Fallback to initial
+      }
+    }
+  }
 
-const mockCompetencyDomains: CompetencyDomain[] = [
-  {
-    icon: "analytics",
-    title: "Statistical Sciences",
-    description: "Survey Sampling, Price Statistics & SDG Metrics",
-    score: 82,
-    status: "Exceeds Benchmark (80%)",
-    tone: "success",
-  },
-  {
-    icon: "terminal",
-    title: "Technical & Analytical",
-    description: "SPSS, Python scripting & GIS Spatial micro-data",
-    score: 61,
-    status: "Gap: -14% (Target: 75%)",
-    tone: "destructive",
-  },
-  {
-    icon: "policy",
-    title: "Digital Governance",
-    description: "DPDP Act 2023, Metadata Standards & DPI",
-    score: 88,
-    status: "Exceeds Benchmark (70%)",
-    tone: "success",
-  },
-  {
-    icon: "account_tree",
-    title: "Managerial & Field Lead",
-    description: "Field Enumeration, Coordination & Quality Audits",
-    score: 76,
-    status: "Meets Benchmark (75%)",
-    tone: "neutral",
-  },
-];
-
-const mockRadarData: RadarPoint[] = [
-  { dimension: "Survey Sampling", current: 88, target: 80 },
-  { dimension: "Visualization", current: 75, target: 75 },
-  { dimension: "Python", current: 42, target: 75 },
-  { dimension: "Nat. Accounts", current: 52, target: 75 },
-  { dimension: "Price Stats", current: 80, target: 75 },
-  { dimension: "SDG Metrics", current: 90, target: 80 },
-  { dimension: "GIS Spatial", current: 48, target: 75 },
-  { dimension: "Governance", current: 85, target: 70 },
-];
-
-const mockRadarLegend: RadarLegendItem[] = [
-  { label: "Survey Sampling (88%)", gap: false },
-  { label: "Visualization (75%)", gap: false },
-  { label: "Python (42% GAP)", gap: true },
-  { label: "Nat. Accounts (52%)", gap: false },
-  { label: "Price Stats (80%)", gap: false },
-  { label: "SDG Metrics (90%)", gap: false },
-  { label: "GIS Spatial (48% GAP)", gap: true },
-  { label: "Governance (85%)", gap: false },
-];
-
-export function getSummaryStats() {
-  return mockSummaryStats;
+  // [CLEAN INITIAL STATE]: New user has not taken an assessment yet
+  return [
+    {
+      label: "Overall Competency",
+      tag: "Pending",
+      tagTone: "neutral",
+      value: "0%",
+      valueNote: "Awaiting Assessment",
+      footnote: "Take the AI Quiz to evaluate competency",
+      progress: 0,
+    },
+    {
+      label: "Learning Progress",
+      tag: "Not Started",
+      tagTone: "neutral",
+      value: "0%",
+      valueNote: "across 0 active tracks",
+      footnote: "Explore recommended learning paths",
+      progress: 0,
+    },
+    {
+      label: "Total Learning Hours",
+      tag: "Logged",
+      tagTone: "neutral",
+      value: "0.0",
+      valueNote: "hrs",
+      footnote: "Target: 50 hrs for fiscal year",
+      progress: 0,
+    },
+    {
+      label: "Active Paths",
+      tag: "Not Started",
+      tagTone: "neutral",
+      value: "0",
+      valueNote: "tracks in progress",
+      footnote: "No remedial tracks active yet",
+      progress: 0,
+    },
+  ];
 }
 
-export function getCompetencyDomains() {
-  return mockCompetencyDomains;
+export function getCompetencyDomains(): CompetencyDomain[] {
+  if (typeof window !== "undefined") {
+    const session = localStorage.getItem("user_assessed_gap");
+    if (session) {
+      try {
+        const data = JSON.parse(session);
+        const scorePct = data.score?.percentage ?? 80;
+        return [
+          {
+            icon: "analytics",
+            title: "Statistical Sciences",
+            description: "Survey Sampling, Price Statistics & SDG Metrics",
+            score: scorePct,
+            status: scorePct >= 70 ? "Benchmark Met" : `Gap: -${Math.max(0, 70 - scorePct)}%`,
+            tone: scorePct >= 70 ? "success" : "destructive",
+          },
+          {
+            icon: "terminal",
+            title: "Technical & Analytical",
+            description: "Python scripting, SQL data pipelines & GIS Spatial",
+            score: Math.round(scorePct * 0.8),
+            status: `Gap: -${Math.max(0, 75 - Math.round(scorePct * 0.8))}%`,
+            tone: "destructive",
+          },
+          {
+            icon: "policy",
+            title: "Digital Governance",
+            description: "DPDP Act 2023, Metadata Standards & DPI",
+            score: 0,
+            status: "Awaiting Assessment",
+            tone: "neutral",
+          },
+          {
+            icon: "account_tree",
+            title: "Managerial & Field Lead",
+            description: "Field Enumeration, Coordination & Quality Audits",
+            score: 0,
+            status: "Awaiting Assessment",
+            tone: "neutral",
+          },
+        ];
+      } catch (e) {}
+    }
+  }
+
+  // [CLEAN INITIAL STATE]: 0% across all domains
+  return [
+    {
+      icon: "analytics",
+      title: "Statistical Sciences",
+      description: "Survey Sampling, Price Statistics & SDG Metrics",
+      score: 0,
+      status: "Awaiting Assessment",
+      tone: "neutral",
+    },
+    {
+      icon: "terminal",
+      title: "Technical & Analytical",
+      description: "SPSS, Python scripting & GIS Spatial micro-data",
+      score: 0,
+      status: "Awaiting Assessment",
+      tone: "neutral",
+    },
+    {
+      icon: "policy",
+      title: "Digital Governance",
+      description: "DPDP Act 2023, Metadata Standards & DPI",
+      score: 0,
+      status: "Awaiting Assessment",
+      tone: "neutral",
+    },
+    {
+      icon: "account_tree",
+      title: "Managerial & Field Lead",
+      description: "Field Enumeration, Coordination & Quality Audits",
+      score: 0,
+      status: "Awaiting Assessment",
+      tone: "neutral",
+    },
+  ];
 }
 
-export function getRadarData() {
-  return mockRadarData;
+export function getRadarData(): RadarPoint[] {
+  if (typeof window !== "undefined") {
+    const session = localStorage.getItem("user_assessed_gap");
+    if (session) {
+      try {
+        const data = JSON.parse(session);
+        const scorePct = data.score?.percentage ?? 80;
+        return [
+          { dimension: "Survey Sampling", current: scorePct, target: 80 },
+          { dimension: "Visualization", current: 0, target: 75 },
+          { dimension: "Python", current: 0, target: 75 },
+          { dimension: "Nat. Accounts", current: 0, target: 75 },
+          { dimension: "Price Stats", current: 0, target: 75 },
+          { dimension: "SDG Metrics", current: 0, target: 80 },
+          { dimension: "GIS Spatial", current: 0, target: 75 },
+          { dimension: "Governance", current: 0, target: 70 },
+        ];
+      } catch (e) {}
+    }
+  }
+
+  return [
+    { dimension: "Survey Sampling", current: 0, target: 80 },
+    { dimension: "Visualization", current: 0, target: 75 },
+    { dimension: "Python", current: 0, target: 75 },
+    { dimension: "Nat. Accounts", current: 0, target: 75 },
+    { dimension: "Price Stats", current: 0, target: 75 },
+    { dimension: "SDG Metrics", current: 0, target: 80 },
+    { dimension: "GIS Spatial", current: 0, target: 75 },
+    { dimension: "Governance", current: 0, target: 70 },
+  ];
 }
 
-export function getRadarLegend() {
-  return mockRadarLegend;
+export function getRadarLegend(): RadarLegendItem[] {
+  return [
+    { label: "Survey Sampling", gap: false },
+    { label: "Visualization", gap: false },
+    { label: "Python", gap: false },
+    { label: "Nat. Accounts", gap: false },
+    { label: "Price Stats", gap: false },
+    { label: "SDG Metrics", gap: false },
+    { label: "GIS Spatial", gap: false },
+    { label: "Governance", gap: false },
+  ];
 }
 
 /* ---------------- Learner competency assessment ---------------- */
