@@ -19,6 +19,7 @@ import {
   getLearningRecommendations,
   type LearningPathRecommendation,
 } from "@/lib/learner-data";
+import { CoursePlayerModal } from "@/components/dashboard/CoursePlayerModal";
 
 export const Route = createFileRoute("/learning-paths")({
   component: LearningPathsPage,
@@ -43,7 +44,13 @@ function StatusBadge({ status }: { status: LearningPathStatus }) {
   );
 }
 
-function LearningPathCard({ path }: { path: LearningPath }) {
+function LearningPathCard({
+  path,
+  onLaunch,
+}: {
+  path: LearningPath;
+  onLaunch: (path: LearningPath, defaultTab?: "syllabus" | "material" | "quiz") => void;
+}) {
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex flex-col gap-3.5">
@@ -141,15 +148,24 @@ function LearningPathCard({ path }: { path: LearningPath }) {
             {path.priority} priority
           </div>
 
-          <a
-            href={path.courseUrl || "https://igotkarmayogi.gov.in"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-[11px] font-semibold text-accent-foreground transition hover:bg-accent/90"
-          >
-            {path.status === "In Progress" ? "Continue Course" : "Open Course"}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onLaunch(path, "quiz")}
+              className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-[11px] font-semibold text-accent hover:bg-accent/20 transition"
+              title="Generate dynamic AI quiz for this course"
+            >
+              <Sparkles className="h-3 w-3" /> AI Quiz
+            </button>
+            <button
+              type="button"
+              onClick={() => onLaunch(path, "syllabus")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-foreground transition hover:bg-accent/90"
+            >
+              {path.status === "In Progress" ? "Continue Course" : "Launch Course"}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </article>
@@ -159,10 +175,12 @@ function LearningPathCard({ path }: { path: LearningPath }) {
 function LearningPathsPage() {
   const currentUser = getCurrentUserProfile();
   const [learningPaths, setLearningPaths] = useState<LearningPathRecommendation[]>([]);
+  const [activePlayerCourse, setActivePlayerCourse] = useState<LearningPath | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     setLearningPaths(getLearningRecommendations());
-  }, []);
+  }, [reloadKey]);
 
   const [activeFilter, setActiveFilter] =
     useState<"All" | LearningPathStatus>("All");
@@ -288,7 +306,11 @@ function LearningPathsPage() {
 
             <section className="grid gap-4 xl:grid-cols-2">
               {filteredPaths.map((path) => (
-                <LearningPathCard key={path.id} path={path} />
+                <LearningPathCard
+                  key={path.id}
+                  path={path}
+                  onLaunch={(p) => setActivePlayerCourse(p)}
+                />
               ))}
             </section>
 
@@ -322,6 +344,13 @@ function LearningPathsPage() {
           </div>
         </main>
       </div>
+
+      <CoursePlayerModal
+        course={activePlayerCourse}
+        isOpen={!!activePlayerCourse}
+        onClose={() => setActivePlayerCourse(null)}
+        onCourseUpdated={() => setReloadKey((k) => k + 1)}
+      />
     </div>
   );
 }

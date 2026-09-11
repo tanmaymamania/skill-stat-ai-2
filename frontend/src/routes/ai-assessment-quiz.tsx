@@ -18,6 +18,7 @@ import { getQuizQuestions, getQuizInsights, type QuizQuestion } from "@/lib/quiz
 import { getSkillGapRows, saveSkillGapRows } from "@/lib/learner-data";
 import { getCurrentUserProfile } from "@/lib/current-user";
 import { syncActiveUserAssessmentHistory } from "@/lib/auth-service";
+import { CoursePlayerModal, type CourseDetails } from "@/components/dashboard/CoursePlayerModal";
 
 export const Route = createFileRoute("/ai-assessment-quiz")({
   component: AIAssessmentQuizPage,
@@ -43,10 +44,11 @@ function AIAssessmentQuizPage() {
   const [markedForReview, setMarkedForReview] = useState<number[]>([]);
   const [recommendedCourses, setRecommendedCourses] = useState<RecommendedCourse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activePlayerCourse, setActivePlayerCourse] = useState<CourseDetails | null>(null);
 
-  // [AI ADAPTIVE]: Generate questions based on the officer's declared profile skills
+  // [AI ADAPTIVE]: Generate 10 questions based on the officer's declared profile skills
   const questions = useMemo(
-    () => getQuizQuestions(profile.existingSkills),
+    () => getQuizQuestions(profile.existingSkills, 10),
     [profile.existingSkills]
   );
   const insights = useMemo(() => getQuizInsights(), []);
@@ -153,67 +155,139 @@ function AIAssessmentQuizPage() {
         })
       );
 
-      // 3b. Generate evaluated competency skill gaps based on the quiz score
+      // 3b. [EMPIRICAL AUTOMATED GAP ENGINE]: Calculate accuracy per tested competency
+      const competencyStats: Record<string, { total: number; correct: number }> = {};
+      questions.forEach((q) => {
+        const comp = q.competency;
+        if (!competencyStats[comp]) competencyStats[comp] = { total: 0, correct: 0 };
+        competencyStats[comp].total++;
+        if (answers[q.id] === q.correctAnswer) {
+          competencyStats[comp].correct++;
+        }
+      });
+
+      const getEmpiricalLevel = (
+        compSubstring: string,
+        fallbackRatio: number
+      ): { level: number; label: string } => {
+        const key = Object.keys(competencyStats).find((k) =>
+          k.toLowerCase().includes(compSubstring.toLowerCase())
+        );
+        const ratio =
+          key && competencyStats[key].total > 0
+            ? competencyStats[key].correct / competencyStats[key].total
+            : fallbackRatio;
+
+        if (ratio >= 0.75) return { level: 4, label: "Advanced" };
+        if (ratio >= 0.5) return { level: 3, label: "Intermediate" };
+        if (ratio >= 0.25) return { level: 2, label: "Foundational" };
+        return { level: 1, label: "Novice" };
+      };
+
+      const overallRatio = questions.length > 0 ? correctCount / questions.length : 0.5;
+      const samplingLvl = getEmpiricalLevel("sampling", overallRatio);
+      const pythonLvl = getEmpiricalLevel("python", overallRatio);
+      const gisLvl = getEmpiricalLevel("gis", overallRatio);
+      const nationalLvl = getEmpiricalLevel("national", overallRatio);
+      const qualityLvl = getEmpiricalLevel("quality", overallRatio);
+      const governanceLvl = getEmpiricalLevel("governance", overallRatio);
+
       const assessedGaps: SkillGapRow[] = [
         {
           skill: "Survey Design & Sampling",
           category: "Statistical",
           description: "Survey design, stratification and sampling estimation",
-          currentLevel: evaluatedLevel,
-          currentLabel:
-            evaluatedLevel >= 4
-              ? "Advanced"
-              : evaluatedLevel === 3
-                ? "Intermediate"
-                : "Foundational",
+          currentLevel: samplingLvl.level,
+          currentLabel: samplingLvl.label,
           requiredLevel: 4,
           requiredLabel: "Advanced",
-          gap: calculatedGap,
-          priority: calculatedGap < 0 ? "High" : "Low",
+          gap: Math.max(0, 4 - samplingLvl.level),
+          priority:
+            4 - samplingLvl.level >= 2
+              ? "High"
+              : 4 - samplingLvl.level === 1
+                ? "Moderate"
+                : "Low",
         },
         {
           skill: "Python for Statistical Computing",
           category: "Technical",
           description: "Pandas, NumPy, automated data validation and processing",
-          currentLevel: evaluatedLevel >= 3 ? 3 : 2,
-          currentLabel: evaluatedLevel >= 3 ? "Intermediate" : "Foundational",
+          currentLevel: pythonLvl.level,
+          currentLabel: pythonLvl.label,
           requiredLevel: 4,
           requiredLabel: "Advanced",
-          gap: (evaluatedLevel >= 3 ? 3 : 2) - 4,
-          priority: "High",
+          gap: Math.max(0, 4 - pythonLvl.level),
+          priority:
+            4 - pythonLvl.level >= 2
+              ? "High"
+              : 4 - pythonLvl.level === 1
+                ? "Moderate"
+                : "Low",
         },
         {
           skill: "GIS & Spatial Data Analysis",
           category: "Technical",
           description: "QGIS, spatial mapping and geospatial micro-data analysis",
-          currentLevel: 2,
-          currentLabel: "Foundational",
+          currentLevel: gisLvl.level,
+          currentLabel: gisLvl.label,
           requiredLevel: 3,
           requiredLabel: "Intermediate",
-          gap: -1,
-          priority: "Moderate",
+          gap: Math.max(0, 3 - gisLvl.level),
+          priority:
+            3 - gisLvl.level >= 2
+              ? "High"
+              : 3 - gisLvl.level === 1
+                ? "Moderate"
+                : "Low",
         },
         {
           skill: "National Accounts & GSDP Estimation",
           category: "Statistical",
-          description: "National accounts concepts and state estimation methods",
-          currentLevel: evaluatedLevel >= 3 ? 3 : 2,
-          currentLabel: evaluatedLevel >= 3 ? "Intermediate" : "Foundational",
+          description: "National accounts concepts, price indices and state estimation methods",
+          currentLevel: nationalLvl.level,
+          currentLabel: nationalLvl.label,
           requiredLevel: 4,
           requiredLabel: "Advanced",
-          gap: (evaluatedLevel >= 3 ? 3 : 2) - 4,
-          priority: "High",
+          gap: Math.max(0, 4 - nationalLvl.level),
+          priority:
+            4 - nationalLvl.level >= 2
+              ? "High"
+              : 4 - nationalLvl.level === 1
+                ? "Moderate"
+                : "Low",
+        },
+        {
+          skill: "Statistical Data Quality & Validation",
+          category: "Statistical",
+          description: "NQAF standards, consistency rules, and modern imputation",
+          currentLevel: qualityLvl.level,
+          currentLabel: qualityLvl.label,
+          requiredLevel: 4,
+          requiredLabel: "Advanced",
+          gap: Math.max(0, 4 - qualityLvl.level),
+          priority:
+            4 - qualityLvl.level >= 2
+              ? "High"
+              : 4 - qualityLvl.level === 1
+                ? "Moderate"
+                : "Low",
         },
         {
           skill: "Digital Data Governance",
           category: "Governance",
-          description: "Data privacy, protection and government data standards",
-          currentLevel: evaluatedLevel >= 3 ? 4 : 3,
-          currentLabel: evaluatedLevel >= 3 ? "Advanced" : "Intermediate",
+          description: "Data privacy, DPDP Act 2023, and government data standards",
+          currentLevel: governanceLvl.level,
+          currentLabel: governanceLvl.label,
           requiredLevel: 3,
           requiredLabel: "Intermediate",
-          gap: (evaluatedLevel >= 3 ? 4 : 3) - 3,
-          priority: "Low",
+          gap: Math.max(0, 3 - governanceLvl.level),
+          priority:
+            3 - governanceLvl.level >= 2
+              ? "High"
+              : 3 - governanceLvl.level === 1
+                ? "Moderate"
+                : "Low",
         },
       ];
       saveSkillGapRows(assessedGaps);
@@ -430,15 +504,41 @@ function AIAssessmentQuizPage() {
                           </div>
                         </div>
 
-                        <div className="pt-2">
-                          <a
-                            href="https://igotkarmayogi.gov.in"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent/90"
+                        <div className="pt-2 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActivePlayerCourse({
+                                id: c.course_id,
+                                title: c.name,
+                                provider: c.provider,
+                                description: c.description,
+                                duration: `${c.duration_hours} Hours`,
+                                whyRecommended: c.reason,
+                                priority: c.difficulty_level >= 4 ? "High" : "Medium",
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent/90 transition"
                           >
-                            Open Course on iGOT <ExternalLink className="h-3 w-3" />
-                          </a>
+                            Launch Course in StatSkill <ArrowRight className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActivePlayerCourse({
+                                id: c.course_id,
+                                title: c.name,
+                                provider: c.provider,
+                                description: c.description,
+                                duration: `${c.duration_hours} Hours`,
+                                whyRecommended: c.reason,
+                                priority: c.difficulty_level >= 4 ? "High" : "Medium",
+                              })
+                            }
+                            className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs font-semibold text-accent hover:bg-accent/20 transition"
+                          >
+                            <Sparkles className="h-3 w-3" /> AI Quiz
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -474,6 +574,12 @@ function AIAssessmentQuizPage() {
           </div>
         </main>
       </div>
+
+      <CoursePlayerModal
+        course={activePlayerCourse}
+        isOpen={!!activePlayerCourse}
+        onClose={() => setActivePlayerCourse(null)}
+      />
     </div>
   );
 }

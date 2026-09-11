@@ -102,6 +102,17 @@ function Index() {
             }
           },
         });
+
+        const btnDiv = document.getElementById("index-gsi-root");
+        if (btnDiv) {
+          (window as any).google.accounts.id.renderButton(btnDiv, {
+            theme: "outline",
+            size: "large",
+            width: "100%",
+            text: "signin_with",
+            shape: "rectangular",
+          });
+        }
       } catch (e) {
         console.warn("Google gsi init notice:", e);
       }
@@ -268,6 +279,9 @@ function Index() {
                 Sign in with Government SSO / Parichay
               </button>
             )}
+
+            {/* Official Google Identity Services button container */}
+            <div id="index-gsi-root" className="w-full flex justify-center mt-3 empty:hidden" />
 
             <button
               type="button"

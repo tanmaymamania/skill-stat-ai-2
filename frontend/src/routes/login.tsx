@@ -23,7 +23,7 @@ function LoginPage() {
 
   // Form fields
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("vivek.reddy@meity.gov.in");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -44,7 +44,9 @@ function LoginPage() {
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
       try {
-        const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "demo-client-id.apps.googleusercontent.com";
+        const clientId =
+          (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+          "demo-client-id.apps.googleusercontent.com";
         (window as any).google.accounts.id.initialize({
           client_id: clientId,
           callback: (response: any) => {
@@ -56,6 +58,17 @@ function LoginPage() {
             }
           },
         });
+
+        const btnDiv = document.getElementById("gsi-button-root");
+        if (btnDiv) {
+          (window as any).google.accounts.id.renderButton(btnDiv, {
+            theme: "outline",
+            size: "large",
+            width: "100%",
+            text: "signin_with",
+            shape: "rectangular",
+          });
+        }
       } catch (e) {
         console.warn("Google gsi init notice:", e);
       }
@@ -342,6 +355,9 @@ function LoginPage() {
             </span>
             <span className="h-px flex-1 bg-border" />
           </div>
+
+          {/* Official Google Identity Services button container */}
+          <div id="gsi-button-root" className="w-full flex justify-center empty:hidden" />
 
           {/* Actual Google Account Sign In Button */}
           <button

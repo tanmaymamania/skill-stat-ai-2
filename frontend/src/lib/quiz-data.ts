@@ -349,33 +349,223 @@ const mockQuestions: QuizQuestion[] = [
       "SQL JOIN operations (INNER, LEFT, FULL) link relational survey tables such as household demographic rosters and individual employment records via shared unique keys.",
     competency: "SQL & Data Management",
   },
+  {
+    id: 25,
+    question:
+      "In national socio-economic surveys (e.g. NSS/PLFS), why is Probability Proportional to Size (PPS) sampling preferred for selecting First Stage Units (villages/urban blocks)?",
+    options: [
+      "To give larger population units a proportionally higher chance of selection, stabilizing sampling weights.",
+      "To ensure that only the smallest hamlets are surveyed.",
+      "To eliminate the need for household-level listing.",
+      "To convert sample statistics directly into census parameters without weights.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "PPS sampling ensures that clusters with larger sizes (census population or households) have selection probabilities proportional to size, leading to self-weighting designs and lower variance.",
+    competency: "Survey Sampling",
+  },
+  {
+    id: 26,
+    question:
+      "Which formula structure is traditionally employed by MoSPI for compiling the Headline Consumer Price Index (CPI)?",
+    options: [
+      "Laspeyres price index formula with fixed base-period expenditure weights.",
+      "Paasche index requiring real-time monthly basket expenditure shares.",
+      "Simple unweighted arithmetic mean of retail shop prices.",
+      "Geometric mean of foreign currency exchange ratios.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "India's headline CPI uses a base-weighted Laspeyres-type aggregation formula (modified Laspeyres), comparing current prices to base period prices weighted by base consumer expenditure shares.",
+    competency: "National Accounts & GSDP",
+  },
+  {
+    id: 27,
+    question:
+      "In empirical statistical inference, what does a p-value less than 0.05 (p < 0.05) signify under a null hypothesis test?",
+    options: [
+      "The observed data is statistically unlikely under the null hypothesis, leading to rejection of the null at the 5% significance level.",
+      "The probability that the research hypothesis is 100% true.",
+      "The exact magnitude of the treatment effect in real currency units.",
+      "That the sample size was too small to make any statistical deduction.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "A p-value is the probability of obtaining test results at least as extreme as the observed data, assuming the null hypothesis is true. A p < 0.05 indicates statistical significance at alpha = 0.05.",
+    competency: "Statistical Analysis",
+  },
+  {
+    id: 28,
+    question:
+      "When decomposing monthly economic time series (such as the Index of Industrial Production - IIP), which method removes recurring seasonal variations?",
+    options: [
+      "Seasonal Adjustment algorithms (such as X-13ARIMA-SEATS).",
+      "Multiplying all data points by 100.",
+      "Dropping data points from festival quarters.",
+      "Replacing time series values with cumulative annual sums.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Official agencies use seasonal adjustment methods like X-13ARIMA-SEATS to separate seasonal fluctuations and calendar holiday effects from underlying trend-cycle movements.",
+    competency: "Statistical Analysis",
+  },
+  {
+    id: 29,
+    question:
+      "What is the statistical advantage of 'Hot-Deck' imputation over simple mean substitution for missing survey responses?",
+    options: [
+      "It preserves the variability and realistic empirical distribution by matching a donor respondent with similar demographic covariates.",
+      "It eliminates the need for computer-assisted data processing.",
+      "It guarantees zero standard error in all downstream regression models.",
+      "It replaces missing values with national GDP aggregates.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Hot-deck imputation replaces missing values with observed responses from a 'donor' unit sharing similar observable traits, avoiding variance artificial compression that occurs with simple mean substitution.",
+    competency: "Data Quality",
+  },
+  {
+    id: 30,
+    question:
+      "In machine learning models applied to administrative government data, what does 'k-fold cross-validation' achieve?",
+    options: [
+      "It evaluates model generalization ability and guards against overfitting across partitioned validation folds.",
+      "It encrypts database tables using 5 private cryptographic keys.",
+      "It converts text survey questions into numerical values.",
+      "It reduces tabular records by deleting 80% of rows.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "K-fold cross-validation splits data into k non-overlapping subsets, iteratively training on k-1 folds and testing on the held-out fold, ensuring reliable out-of-sample performance estimation.",
+    competency: "Machine Learning",
+  },
+  {
+    id: 31,
+    question:
+      "Which SQL window function assigns a sequential integer to rows within a partition, ordered by a specified column (e.g. ranking officers within each district)?",
+    options: [
+      "ROW_NUMBER() OVER (PARTITION BY district_code ORDER BY performance_score DESC)",
+      "COUNT(*) GROUP BY district_code",
+      "SELECT DISTINCT district_code ORDER BY performance_score",
+      "SUM(performance_score) WHERE district_code IS NOT NULL",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "ROW_NUMBER() with PARTITION BY divides results into logical groups and computes a sequential ranking based on the ORDER BY clause within each distinct partition.",
+    competency: "SQL & Data Management",
+  },
+  {
+    id: 32,
+    question:
+      "In Python Pandas, what is the most efficient way to compute mean household income grouped by state and rural/urban sector?",
+    options: [
+      "df.groupby(['state', 'sector'])['income'].mean()",
+      "Using nested for-loops iterating over df.iterrows() for every record",
+      "df.sort_values('income').head(10)",
+      "df['income'].sum() / len(df)",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Pandas groupby aggregation leverages vectorised C/Cython execution across multi-index keys, providing fast, memory-efficient statistical summarisation for large datasets.",
+    competency: "Python",
+  },
+  {
+    id: 33,
+    question:
+      "What defines a Multi-Stage Stratified Sampling design in large national surveys like the Periodic Labour Force Survey (PLFS)?",
+    options: [
+      "Stratifying districts into urban/rural, sampling primary census blocks (FSUs), and then sampling households (SSUs) within each block.",
+      "Only surveying households that voluntarily submit online web forms.",
+      "Sampling every citizen living in state capitals only.",
+      "Choosing sample locations purely on convenience of transportation.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Multi-stage stratified sampling first stratifies broad geographic regions into primary sampling units (FSUs/Census Enumeration Blocks), followed by secondary sampling units (SSUs/households) inside selected FSUs.",
+    competency: "Survey Sampling",
+  },
+  {
+    id: 34,
+    question:
+      "Under the UN National Quality Assurance Framework (NQAF), which core dimensions constitute statistical product quality?",
+    options: [
+      "Relevance, Accuracy, Timeliness, Accessibility, Comparability, and Coherence.",
+      "File size, compression ratio, network speed, and hard drive capacity.",
+      "Government authority, budget allocation, and staff headcount.",
+      "Number of printed paper copies distributed to district libraries.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "NQAF defines product quality through established dimensions: relevance to user needs, empirical accuracy/reliability, timeliness of release, accessibility/clarity, and geographic/temporal comparability.",
+    competency: "Data Quality",
+  },
+  {
+    id: 35,
+    question:
+      "How can official statisticians integrate high-frequency GSTN e-way bill transaction data with Annual Survey of Industries (ASI)?",
+    options: [
+      "Record linkage using GSTIN / PAN identifiers to track real-time freight and output movements before annual survey publication.",
+      "Replacing all ASI factory visits permanently with web search queries.",
+      "Discarding GST data because it is administrative rather than survey-based.",
+      "Manually typing every paper invoice into an unindexed spreadsheet.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Administrative big data from GSTN/e-way bills linked via enterprise PAN/GSTIN provides high-frequency leading indicators of manufacturing and logistics, complementing traditional structural surveys.",
+    competency: "Digital Data Governance",
+  },
+  {
+    id: 36,
+    question:
+      "In QGIS / spatial GIS workflows, what coordinate reference system (CRS) consideration is crucial when calculating geographic buffer distances in kilometres?",
+    options: [
+      "Transforming geographic lat/long coordinates (WGS84 EPSG:4326) into a Projected Coordinate System (UTM / EPSG:32643) with metric units.",
+      "Leaving coordinates in angular degrees and multiplying directly by 1000.",
+      "GIS buffers can only be calculated without any coordinate system.",
+      "Changing the map background image from light mode to satellite mode.",
+    ],
+    correctAnswer: 0,
+    explanation:
+      "Geographic coordinates (EPSG:4326) measure angles in degrees. Precise metric distance buffering requires reprojecting layers into a Projected Coordinate System (e.g. UTM) where coordinates represent linear metres.",
+    competency: "GIS & Spatial Mapping",
+  },
 ];
 
 const mockInsights: CompetencyInsight[] = [
   {
     competency: "Survey Sampling",
     result: "Strong",
-    detail: "Strong understanding demonstrated in the assessment.",
+    detail: "Strong understanding demonstrated in sampling design, stratification, and estimation weights.",
   },
   {
     competency: "Data Quality",
     result: "Needs Practice",
-    detail: "Additional targeted practice is recommended.",
+    detail: "Additional practice recommended in validation checks, imputation methods, and NQAF standards.",
   },
   {
     competency: "Python",
     result: "Improving",
-    detail: "Performance indicates progress in the technical skill area.",
+    detail: "Performance indicates solid progress in pandas operations and data cleaning workflows.",
+  },
+  {
+    competency: "SQL & Data Management",
+    result: "Strong",
+    detail: "Demonstrates high proficiency in relational database operations, joins, and analytical queries.",
+  },
+  {
+    competency: "GIS & Spatial Mapping",
+    result: "Needs Practice",
+    detail: "Practice recommended in geospatial joins, coordinate projection, and spatial disparity analysis.",
   },
 ];
 
 /**
  * [AI ADAPTIVE GENERATOR]:
- * Tailors assessment questions to the officer's declared skills and cadre role.
+ * Returns 10 comprehensive assessment questions matching the officer's declared profile and cadre role.
  */
-export function getQuizQuestions(userSkills?: string[]): QuizQuestion[] {
+export function getQuizQuestions(userSkills?: string[], targetCount = 10): QuizQuestion[] {
   if (!userSkills || userSkills.length === 0) {
-    return mockQuestions.slice(0, 6);
+    return mockQuestions.slice(0, targetCount);
   }
 
   const normalized = userSkills.map((s) => s.toLowerCase().trim());
@@ -394,18 +584,60 @@ export function getQuizQuestions(userSkills?: string[]): QuizQuestion[] {
         (s.includes("sampling") && (comp.includes("survey") || comp.includes("sampling"))) ||
         (s.includes("quality") && comp.includes("quality")) ||
         (s.includes("governance") && comp.includes("governance")) ||
-        (s.includes("account") && comp.includes("account")) ||
-        (s.includes("visual") && comp.includes("visual"))
+        (s.includes("account") && (comp.includes("account") || comp.includes("gsdp"))) ||
+        (s.includes("visual") && comp.includes("visual")) ||
+        (s.includes("ml") || s.includes("machine") && comp.includes("machine"))
     );
   });
 
-  if (matched.length >= 4) {
-    return matched.slice(0, 6);
+  if (matched.length >= targetCount) {
+    return matched.slice(0, targetCount);
   }
 
-  // Combine matched with relevant cadre questions to always provide 5-6 questions
+  // Combine matched with relevant cadre questions to always provide the target count
   const remaining = mockQuestions.filter((q) => !matched.includes(q));
-  return [...matched, ...remaining].slice(0, 6);
+  return [...matched, ...remaining].slice(0, targetCount);
+}
+
+/**
+ * [DYNAMIC ON-DEMAND AI COURSE QUIZ GENERATOR]:
+ * Generates custom diagnostic & mastery questions specifically for any course or topic
+ * so the learner never has to leave the website for external portals.
+ */
+export function generateDynamicCourseQuiz(
+  courseTitle: string,
+  skillCategory?: string,
+  count = 5
+): QuizQuestion[] {
+  const query = (courseTitle + " " + (skillCategory || "")).toLowerCase();
+
+  // Find existing questions matching course topic
+  let relevant = mockQuestions.filter((q) => {
+    const text = (q.question + " " + q.competency + " " + q.explanation).toLowerCase();
+    return (
+      (query.includes("survey") && text.includes("survey")) ||
+      (query.includes("sampling") && (text.includes("sampling") || text.includes("pps"))) ||
+      (query.includes("python") && text.includes("python")) ||
+      (query.includes("sql") && text.includes("sql")) ||
+      (query.includes("gis") && (text.includes("gis") || text.includes("spatial"))) ||
+      (query.includes("quality") && text.includes("quality")) ||
+      (query.includes("national") && (text.includes("national") || text.includes("gsdp") || text.includes("cpi"))) ||
+      (query.includes("accounts") && (text.includes("accounts") || text.includes("gsdp"))) ||
+      (query.includes("governance") && (text.includes("governance") || text.includes("dpdp"))) ||
+      (query.includes("machine") && (text.includes("machine") || text.includes("model")))
+    );
+  });
+
+  // If not enough questions found, supplement from general bank
+  if (relevant.length < count) {
+    const others = mockQuestions.filter((q) => !relevant.includes(q));
+    relevant = [...relevant, ...others];
+  }
+
+  return relevant.slice(0, count).map((q, idx) => ({
+    ...q,
+    id: 1000 + idx + 1,
+  }));
 }
 
 export function getQuizInsights(): CompetencyInsight[] {
