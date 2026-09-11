@@ -1,16 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { AlertTriangle, Check, Sparkles, Target, TrendingDown } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { AlertTriangle, Check, Sparkles, Target, ArrowRight } from "lucide-react";
 
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
@@ -22,10 +12,59 @@ export const Route = createFileRoute("/skill-gap-analysis")({
 
 type Filter = "all" | "priority" | "Technical" | "Statistical" | "Governance";
 
+export function getActionForSkill(skillName: string) {
+  const lower = skillName.toLowerCase();
+  if (lower.includes("python")) {
+    return {
+      course: "Python for Official Statistics",
+      duration: "8 hrs",
+      action: "Launch Course",
+    };
+  }
+  if (lower.includes("gis") || lower.includes("spatial")) {
+    return {
+      course: "QGIS Geospatial Mapping & Buffers",
+      duration: "6 hrs",
+      action: "Launch Course",
+    };
+  }
+  if (lower.includes("account") || lower.includes("gsdp") || lower.includes("cpi")) {
+    return {
+      course: "National Accounts & GSDP Estimation",
+      duration: "10 hrs",
+      action: "Launch Course",
+    };
+  }
+  if (lower.includes("survey") || lower.includes("sampling") || lower.includes("plfs")) {
+    return {
+      course: "Survey Sampling & Multi-Stage NSS",
+      duration: "12 hrs",
+      action: "Launch Course",
+    };
+  }
+  if (lower.includes("quality") || lower.includes("validation")) {
+    return {
+      course: "UN NQAF Data Quality & Imputation",
+      duration: "6 hrs",
+      action: "Launch Course",
+    };
+  }
+  if (lower.includes("governance") || lower.includes("privacy") || lower.includes("dpdp")) {
+    return {
+      course: "DPDP Act 2023 & Data Governance",
+      duration: "4 hrs",
+      action: "Launch Course",
+    };
+  }
+  return {
+    course: "Official Cadre Competency Course",
+    duration: "6 hrs",
+    action: "Launch Course",
+  };
+}
+
 function SkillGapAnalysisPage() {
   const [activeFilter, setActiveFilter] = useState<Filter>("all");
-  
-  // [FIXED]: Read dynamically so changes from quiz completion appear immediately
   const [gapRows, setGapRows] = useState<SkillGapRow[]>([]);
 
   useEffect(() => {
@@ -35,12 +74,22 @@ function SkillGapAnalysisPage() {
   const filteredRows = useMemo(() => {
     if (activeFilter === "all") return gapRows;
     if (activeFilter === "priority") {
-      return gapRows.filter((r) => r.gap < 0);
+      return gapRows.filter(
+        (r) =>
+          r.requiredLevel > r.currentLevel ||
+          r.priority === "High" ||
+          r.priority === "Moderate"
+      );
     }
     return gapRows.filter((r) => r.category === activeFilter);
   }, [activeFilter, gapRows]);
 
-  const priorityGapCount = gapRows.filter((r) => r.gap < 0).length;
+  const priorityGapCount = gapRows.filter(
+    (r) =>
+      r.requiredLevel > r.currentLevel ||
+      r.priority === "High" ||
+      r.priority === "Moderate"
+  ).length;
 
   return (
     <div className="flex min-h-screen bg-muted/40">
@@ -51,14 +100,14 @@ function SkillGapAnalysisPage() {
 
         <main className="flex-1 px-4 py-6 lg:px-7 lg:py-7">
           <div className="mx-auto max-w-6xl space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Competency Skill Gap Analysis</h1>
                 <p className="text-xs text-muted-foreground">
-                  Benchmark: Statistical Officer Cadre Requirements vs Verified Assessment
+                  Empirical Benchmark: Statistical Officer Cadre Requirements vs Verified Assessment
                 </p>
               </div>
-              <div className="flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-1.5 text-xs font-bold text-accent">
+              <div className="flex items-center gap-2 rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent">
                 <Target className="h-4 w-4" />
                 {priorityGapCount} Active Competency Gaps
               </div>
@@ -72,11 +121,11 @@ function SkillGapAnalysisPage() {
                   onClick={() => setActiveFilter(tab)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition ${
                     activeFilter === tab
-                      ? "bg-accent text-accent-foreground"
+                      ? "bg-accent text-accent-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  {tab === "priority" ? "Action Needed" : tab}
+                  {tab === "priority" ? "Actions Needed" : tab}
                 </button>
               ))}
             </div>
@@ -116,42 +165,102 @@ function SkillGapAnalysisPage() {
                       <th className="p-3.5 text-center">Target Level</th>
                       <th className="p-3.5 text-center">Current Gap</th>
                       <th className="p-3.5 text-center">Action Priority</th>
+                      <th className="p-3.5 text-center">Actions Needed</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-foreground">
-                    {filteredRows.map((row) => (
-                      <tr key={row.skill} className="hover:bg-muted/20">
-                        <td className="p-3.5">
-                          <p className="font-bold text-foreground">{row.skill}</p>
-                          <p className="text-[11px] text-muted-foreground">{row.description}</p>
-                        </td>
-                        <td className="p-3.5">
-                          <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold">
-                            {row.category}
-                          </span>
-                        </td>
-                        <td className="p-3.5 text-center font-bold">Level {row.currentLevel}</td>
-                        <td className="p-3.5 text-center font-bold">Level {row.requiredLevel}</td>
-                        <td className="p-3.5 text-center">
-                          {row.gap < 0 ? (
-                            <span className="font-bold text-destructive">{row.gap} Levels</span>
-                          ) : (
-                            <span className="font-bold text-success">✓ Benchmark Met</span>
-                          )}
-                        </td>
-                        <td className="p-3.5 text-center">
-                          {row.gap < 0 ? (
-                            <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-[10px] font-bold text-destructive">
-                              High Priority
+                    {filteredRows.map((row) => {
+                      const deficit = row.requiredLevel - row.currentLevel;
+                      const hasDeficit = deficit > 0;
+
+                      // Exact Action Priority based on deficit magnitude
+                      let priorityLabel = "Meets Requirement";
+                      let priorityClass = "bg-success/15 text-success border-success/30";
+
+                      if (deficit >= 2 || row.priority === "High") {
+                        priorityLabel = "High Priority";
+                        priorityClass = "bg-destructive/15 text-destructive border-destructive/30";
+                      } else if (deficit === 1 || row.priority === "Moderate") {
+                        priorityLabel = "Moderate Priority";
+                        priorityClass = "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30";
+                      } else if (deficit < 0) {
+                        priorityLabel = "Exceeds Benchmark";
+                        priorityClass = "bg-primary/15 text-primary border-primary/30";
+                      }
+
+                      const action = getActionForSkill(row.skill);
+
+                      return (
+                        <tr key={row.skill} className="hover:bg-muted/20 transition">
+                          <td className="p-3.5">
+                            <p className="font-bold text-foreground">{row.skill}</p>
+                            <p className="text-[11px] text-muted-foreground">{row.description}</p>
+                          </td>
+                          <td className="p-3.5">
+                            <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold">
+                              {row.category}
                             </span>
-                          ) : (
-                            <span className="rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-bold text-success">
-                              Meets Requirement
+                          </td>
+                          <td className="p-3.5 text-center font-bold">
+                            <span className="rounded bg-muted/60 px-2 py-1 text-xs">
+                              Level {row.currentLevel}
                             </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="p-3.5 text-center font-bold">
+                            <span className="rounded bg-muted/60 px-2 py-1 text-xs">
+                              Level {row.requiredLevel}
+                            </span>
+                          </td>
+
+                          {/* 1. ACTUAL CURRENT GAP */}
+                          <td className="p-3.5 text-center">
+                            {hasDeficit ? (
+                              <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-1 text-xs font-bold text-destructive">
+                                -{deficit} {deficit === 1 ? "Level Deficit" : "Levels Deficit"}
+                              </span>
+                            ) : deficit < 0 ? (
+                              <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
+                                +{Math.abs(deficit)} Levels (Exceeds)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded bg-success/10 px-2 py-1 text-xs font-bold text-success">
+                                <Check className="h-3 w-3" /> Benchmark Met
+                              </span>
+                            )}
+                          </td>
+
+                          {/* 2. REAL ACTION PRIORITY LEVEL */}
+                          <td className="p-3.5 text-center">
+                            <span className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-bold border ${priorityClass}`}>
+                              {priorityLabel}
+                            </span>
+                          </td>
+
+                          {/* 3. ACTIONS NEEDED */}
+                          <td className="p-3.5 text-center">
+                            {hasDeficit ? (
+                              <div className="flex flex-col items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-foreground">
+                                  {action.course}
+                                </span>
+                                <Link
+                                  to="/learning-paths"
+                                  className="inline-flex items-center gap-1 rounded-md bg-accent px-2.5 py-1 text-[10px] font-bold text-accent-foreground shadow-sm hover:bg-accent/90 transition"
+                                >
+                                  <span>{action.action}</span>
+                                  <span className="text-[9px] opacity-80">({action.duration})</span>
+                                  <ArrowRight className="h-3 w-3" />
+                                </Link>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-muted-foreground font-medium flex items-center justify-center gap-1">
+                                <Check className="h-3 w-3 text-success" /> None Required (Qualified)
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
