@@ -15,11 +15,25 @@ import { StatSkillWordmark } from "@/components/StatSkillLogo";
 import { loginUser, registerUser, loginWithGooglePayload, parseGoogleJwt } from "@/lib/auth-service";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      mode: (search.mode as "signin" | "signup") || "signin",
+      role: (search.role as string) || "learner",
+    };
+  },
   component: LoginPage,
 });
 
 function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(search.mode || "signin");
+
+  // Sync mode if query param changes
+  useEffect(() => {
+    if (search.mode) {
+      setMode(search.mode);
+    }
+  }, [search.mode]);
 
   // Form fields
   const [name, setName] = useState("");
@@ -40,15 +54,24 @@ function LoginPage() {
   const [googleEmailInput, setGoogleEmailInput] = useState("");
   const [googleNameInput, setGoogleNameInput] = useState("");
 
-  // Initialize Google Identity Services if available on window
+  // Check if a real registered Google Client ID is configured
+  const rawClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+  const hasValidGoogleClientId = Boolean(
+    rawClientId &&
+    !rawClientId.includes("demo-client-id") &&
+    rawClientId.trim().length > 10
+  );
+
+  // Initialize Google Identity Services ONLY if a real registered client ID is provided
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+    if (
+      hasValidGoogleClientId &&
+      typeof window !== "undefined" &&
+      (window as any).google?.accounts?.id
+    ) {
       try {
-        const clientId =
-          (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-          "demo-client-id.apps.googleusercontent.com";
         (window as any).google.accounts.id.initialize({
-          client_id: clientId,
+          client_id: rawClientId,
           callback: (response: any) => {
             if (response?.credential) {
               const decoded = parseGoogleJwt(response.credential);
@@ -58,22 +81,11 @@ function LoginPage() {
             }
           },
         });
-
-        const btnDiv = document.getElementById("gsi-button-root");
-        if (btnDiv) {
-          (window as any).google.accounts.id.renderButton(btnDiv, {
-            theme: "outline",
-            size: "large",
-            width: "100%",
-            text: "signin_with",
-            shape: "rectangular",
-          });
-        }
       } catch (e) {
         console.warn("Google gsi init notice:", e);
       }
     }
-  }, []);
+  }, [hasValidGoogleClientId, rawClientId]);
 
   const handleGoogleSuccess = (googleEmail: string, googleName?: string, picture?: string) => {
     const user = loginWithGooglePayload({
@@ -356,23 +368,23 @@ function LoginPage() {
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          {/* Official Google Identity Services button container */}
-          <div id="gsi-button-root" className="w-full flex justify-center empty:hidden" />
-
-          {/* Actual Google Account Sign In Button */}
+          {/* Single Clean Google Sign-In Button */}
           <button
             type="button"
             onClick={() => {
-              // If native Google Identity GIS is initialized, trigger prompt
-              if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+              if (
+                hasValidGoogleClientId &&
+                typeof window !== "undefined" &&
+                (window as any).google?.accounts?.id
+              ) {
                 try {
                   (window as any).google.accounts.id.prompt();
+                  return;
                 } catch {}
               }
-              // Open modal to sign in with your real Google email
               setShowGoogleModal(true);
             }}
-            className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted"
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted shadow-sm"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path

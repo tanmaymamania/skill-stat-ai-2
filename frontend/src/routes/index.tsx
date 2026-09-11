@@ -5,10 +5,12 @@ import {
   CheckCircle2,
   ClipboardList,
   Landmark,
+  LogIn,
   Mail,
   ShieldCheck,
   TrendingUp,
   User,
+  UserPlus,
   X,
 } from "lucide-react";
 import { StatSkillWordmark } from "@/components/StatSkillLogo";
@@ -85,14 +87,22 @@ function Index() {
   const [googleEmailInput, setGoogleEmailInput] = useState("");
   const [googleNameInput, setGoogleNameInput] = useState("");
 
+  const rawClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+  const hasValidGoogleClientId = Boolean(
+    rawClientId &&
+    !rawClientId.includes("demo-client-id") &&
+    rawClientId.trim().length > 10
+  );
+
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+    if (
+      hasValidGoogleClientId &&
+      typeof window !== "undefined" &&
+      (window as any).google?.accounts?.id
+    ) {
       try {
-        const clientId =
-          (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-          "demo-client-id.apps.googleusercontent.com";
         (window as any).google.accounts.id.initialize({
-          client_id: clientId,
+          client_id: rawClientId,
           callback: (response: any) => {
             if (response?.credential) {
               const decoded = parseGoogleJwt(response.credential);
@@ -102,22 +112,11 @@ function Index() {
             }
           },
         });
-
-        const btnDiv = document.getElementById("index-gsi-root");
-        if (btnDiv) {
-          (window as any).google.accounts.id.renderButton(btnDiv, {
-            theme: "outline",
-            size: "large",
-            width: "100%",
-            text: "signin_with",
-            shape: "rectangular",
-          });
-        }
       } catch (e) {
         console.warn("Google gsi init notice:", e);
       }
     }
-  }, [role]);
+  }, [role, hasValidGoogleClientId, rawClientId]);
 
   const handleGoogleSuccess = (
     googleEmail: string,
@@ -280,23 +279,23 @@ function Index() {
               </button>
             )}
 
-            {/* Official Google Identity Services button container */}
-            <div id="index-gsi-root" className="w-full flex justify-center mt-3 empty:hidden" />
-
+            {/* Single Clean Google Sign In Button */}
             <button
               type="button"
               onClick={() => {
                 if (
+                  hasValidGoogleClientId &&
                   typeof window !== "undefined" &&
                   (window as any).google?.accounts?.id
                 ) {
                   try {
                     (window as any).google.accounts.id.prompt();
+                    return;
                   } catch {}
                 }
                 setShowGoogleModal(true);
               }}
-              className="mt-3 flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="mt-3 flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted shadow-sm"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
                 <path
@@ -323,31 +322,31 @@ function Index() {
               <span className="h-px flex-1 bg-border" />
 
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                or
+                or with official account
               </span>
 
               <span className="h-px flex-1 bg-border" />
             </div>
 
-            {role === "learner" ? (
- 
+            {/* Clear Sign In & Sign Up Options */}
+            <div className="grid grid-cols-2 gap-3">
               <Link
                 to="/login"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-input bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                search={{ mode: "signin", role }}
+                className="flex items-center justify-center gap-2 rounded-lg border border-input bg-card px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted shadow-sm text-center"
               >
-                <Mail className="h-4 w-4" />
-                Continue with Email
+                <LogIn className="h-4 w-4" />
+                Sign In
               </Link>
-            ) : (
-  <Link
-    to="/login"
-    search={{ role: "admin" }}
-    className="flex w-full items-center justify-center gap-2 rounded-lg border border-input bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-  >
-    <Mail className="h-4 w-4" />
-    Continue with Email
-  </Link>
-)}
+              <Link
+                to="/login"
+                search={{ mode: "signup", role }}
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm text-center"
+              >
+                <UserPlus className="h-4 w-4" />
+                Sign Up
+              </Link>
+            </div>
 
             {status && (
               <p
