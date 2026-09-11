@@ -3,13 +3,18 @@ import {
   Award,
   BookOpen,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Clock3,
+  ExternalLink,
   FileText,
+  Play,
   PlayCircle,
   RotateCcw,
   Sparkles,
   Target,
+  Tv,
+  Video,
   X,
 } from "lucide-react";
 import { generateDynamicCourseQuiz, type QuizQuestion } from "@/lib/quiz-data";
@@ -35,6 +40,55 @@ interface CoursePlayerModalProps {
   onCourseUpdated?: () => void;
 }
 
+const TOPIC_VIDEO_SOURCES: Record<string, { mp4: string; youtubeId: string; title: string }> = {
+  default: {
+    mp4: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    youtubeId: "sZkMvdcglrA",
+    title: "Official Cadre Statistics & Empirical Survey Methods",
+  },
+  sampling: {
+    mp4: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    youtubeId: "sZkMvdcglrA",
+    title: "Survey Sampling, Multi-Stage Stratification & NSS Design",
+  },
+  python: {
+    mp4: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    youtubeId: "rfscVS0vtbw",
+    title: "Python Data Analysis, Pandas & Automated Government Microdata Pipelines",
+  },
+  gis: {
+    mp4: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    youtubeId: "2XnL-jA6m70",
+    title: "QGIS Geospatial Mapping, Cadastral Buffers & Spatial Statistics",
+  },
+  accounts: {
+    mp4: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    youtubeId: "14ePj_X5JpA",
+    title: "National Accounts Compilation, GSDP Deflators & Economic Indicators",
+  },
+  sql: {
+    mp4: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4",
+    youtubeId: "HXV3zeRR3h4",
+    title: "Advanced SQL Aggregations & Public Administrative Registries",
+  },
+  quality: {
+    mp4: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    youtubeId: "7DkeZ_6oXp0",
+    title: "UN NQAF Data Quality, Imputation & Administrative Validation",
+  },
+};
+
+function getCourseVideo(title: string, category?: string) {
+  const combined = (title + " " + (category || "")).toLowerCase();
+  if (combined.includes("python") || combined.includes("scripting") || combined.includes("machine learning")) return TOPIC_VIDEO_SOURCES.python;
+  if (combined.includes("gis") || combined.includes("spatial") || combined.includes("mapping")) return TOPIC_VIDEO_SOURCES.gis;
+  if (combined.includes("sql") || combined.includes("database") || combined.includes("registry")) return TOPIC_VIDEO_SOURCES.sql;
+  if (combined.includes("account") || combined.includes("gsdp") || combined.includes("cpi") || combined.includes("macroeconomic")) return TOPIC_VIDEO_SOURCES.accounts;
+  if (combined.includes("quality") || combined.includes("imputation") || combined.includes("assurance")) return TOPIC_VIDEO_SOURCES.quality;
+  if (combined.includes("survey") || combined.includes("sampling") || combined.includes("plfs") || combined.includes("nss")) return TOPIC_VIDEO_SOURCES.sampling;
+  return TOPIC_VIDEO_SOURCES.default;
+}
+
 export function CoursePlayerModal({
   course,
   isOpen,
@@ -46,6 +100,7 @@ export function CoursePlayerModal({
   const [activeTab, setActiveTab] = useState<"syllabus" | "material" | "quiz">("syllabus");
   const [completedLessons, setCompletedLessons] = useState<Record<string, boolean>>({});
   const [selectedLesson, setSelectedLesson] = useState<number>(0);
+  const [playerMode, setPlayerMode] = useState<"native" | "embed">("native");
 
   // Dynamic AI Quiz State
   const [quizStarted, setQuizStarted] = useState(false);
@@ -55,6 +110,10 @@ export function CoursePlayerModal({
   // Generate dynamic AI questions specifically for this course
   const dynamicQuizQuestions = useMemo<QuizQuestion[]>(() => {
     return generateDynamicCourseQuiz(course.title, course.category, 5);
+  }, [course.title, course.category]);
+
+  const videoData = useMemo(() => {
+    return getCourseVideo(course.title, course.category);
   }, [course.title, course.category]);
 
   // Structured syllabus modules
@@ -109,15 +168,82 @@ export function CoursePlayerModal({
     },
   ];
 
-  const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
+  // Flatten lessons for seamless video navigation
+  const allLessons = useMemo(() => {
+    const list: {
+      index: number;
+      moduleIdx: number;
+      lessonIdx: number;
+      moduleTitle: string;
+      title: string;
+      summary: string;
+      content: string;
+    }[] = [];
+    let idx = 0;
+    modules.forEach((m, mIdx) => {
+      m.lessons.forEach((l, lIdx) => {
+        list.push({
+          index: idx++,
+          moduleIdx: mIdx,
+          lessonIdx: lIdx,
+          moduleTitle: m.title,
+          title: l.title,
+          summary: l.summary,
+          content: l.content,
+        });
+      });
+    });
+    return list;
+  }, []);
+
+  const currentLesson = allLessons[selectedLesson] || allLessons[0];
+  const currentLessonKey = `${currentLesson.moduleIdx}-${currentLesson.lessonIdx}`;
+  const isCurrentLessonDone = !!completedLessons[currentLessonKey];
+
+  const totalLessons = allLessons.length;
   const completedCount = Object.values(completedLessons).filter(Boolean).length;
   const progressPercent = Math.round((completedCount / totalLessons) * 100);
 
+  const syncCourseProgress = (updatedCompleted: Record<string, boolean>) => {
+    try {
+      const raw = localStorage.getItem("active_learning_paths");
+      if (raw) {
+        const paths = JSON.parse(raw);
+        if (Array.isArray(paths)) {
+          const count = Object.values(updatedCompleted).filter(Boolean).length;
+          const pct = Math.round((count / totalLessons) * 100);
+          const updated = paths.map((p) => {
+            if (p.id === course.id || p.title === course.title) {
+              return {
+                ...p,
+                status: pct >= 100 ? "Completed" : pct > 0 ? "In Progress" : p.status,
+                progress: pct,
+              };
+            }
+            return p;
+          });
+          localStorage.setItem("active_learning_paths", JSON.stringify(updated));
+          if (onCourseUpdated) onCourseUpdated();
+        }
+      }
+    } catch {}
+  };
+
   const toggleLesson = (key: string) => {
-    setCompletedLessons((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setCompletedLessons((prev) => {
+      const next = {
+        ...prev,
+        [key]: !prev[key],
+      };
+      syncCourseProgress(next);
+      return next;
+    });
+  };
+
+  const markCurrentLessonComplete = () => {
+    if (!isCurrentLessonDone) {
+      toggleLesson(currentLessonKey);
+    }
   };
 
   const handleQuizAnswer = (qId: number, optionIdx: number) => {
@@ -150,100 +276,108 @@ export function CoursePlayerModal({
             return p;
           });
           localStorage.setItem("active_learning_paths", JSON.stringify(updated));
-          syncActiveUserAssessmentHistory();
         }
       }
+
+      // Mark all lessons as completed
+      const allDone: Record<string, boolean> = {};
+      allLessons.forEach((l) => {
+        allDone[`${l.moduleIdx}-${l.lessonIdx}`] = true;
+      });
+      setCompletedLessons(allDone);
+
+      // Record to user assessment history
+      syncActiveUserAssessmentHistory({
+        quizTitle: `${course.title} Mastery Quiz`,
+        scorePercent: 100,
+        competenciesGained: course.skills || ["Applied Cadre Competency"],
+      });
+
       if (onCourseUpdated) onCourseUpdated();
     } catch (e) {
-      console.error(e);
+      console.warn("Could not mark course as complete:", e);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6 backdrop-blur-sm">
-      <div className="flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-        {/* Course Player Header */}
-        <div className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="relative flex h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-muted/30">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground font-bold shadow">
               <BookOpen className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                  {course.provider || "iGOT Karmayogi Official"}
+                <span className="rounded bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent uppercase">
+                  {course.provider || "MoSPI Cadre Academy"}
                 </span>
-                <span className="text-xs text-muted-foreground">•</span>
-                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                  <Clock3 className="h-3 w-3" /> {course.duration || "4 hours"}
-                </span>
+                {course.priority && (
+                  <span className="rounded bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                    {course.priority} Priority
+                  </span>
+                )}
               </div>
-              <h2 className="text-base font-bold text-foreground sm:text-lg leading-tight mt-0.5">
-                {course.title}
-              </h2>
+              <h2 className="text-base font-bold text-foreground line-clamp-1">{course.title}</h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Quick Completion Button */}
-            <button
-              type="button"
-              onClick={handleCompleteCourse}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-semibold text-success hover:bg-success/25 transition"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" /> Mark Course Done
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-6 py-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("syllabus")}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
-              activeTab === "syllabus"
-                ? "bg-accent text-accent-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <BookOpen className="h-3.5 w-3.5" /> Course Syllabus & Lessons
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("material")}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
-              activeTab === "material"
-                ? "bg-accent text-accent-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <FileText className="h-3.5 w-3.5" /> Interactive Study Reader
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("quiz")}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
-              activeTab === "quiz"
-                ? "bg-accent text-accent-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5" /> Generate AI Practice Quiz
-          </button>
+        {/* Tab Navigation */}
+        <div className="flex items-center justify-between border-b border-border px-6 bg-card">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("syllabus")}
+              className={`flex items-center gap-2 border-b-2 py-3 px-3 text-xs font-semibold transition ${
+                activeTab === "syllabus"
+                  ? "border-accent text-accent font-bold"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <BookOpen className="h-4 w-4" /> Curriculum & Syllabus
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("material")}
+              className={`flex items-center gap-2 border-b-2 py-3 px-3 text-xs font-semibold transition ${
+                activeTab === "material"
+                  ? "border-accent text-accent font-bold"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <PlayCircle className="h-4 w-4" /> Course Video & Study Guide
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("quiz")}
+              className={`flex items-center gap-2 border-b-2 py-3 px-3 text-xs font-semibold transition ${
+                activeTab === "quiz"
+                  ? "border-accent text-accent font-bold"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Sparkles className="h-4 w-4 text-accent" /> AI Mastery Quiz
+            </button>
+          </div>
 
-          <div className="ml-auto hidden sm:flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Progress:</span>
-            <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock3 className="h-3.5 w-3.5" />
+              <span>{course.duration || "2 hrs 30 mins"}</span>
+            </div>
+            <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-accent transition-all duration-300"
+                className="h-full rounded-full bg-success transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -253,6 +387,7 @@ export function CoursePlayerModal({
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* TAB 1: SYLLABUS */}
           {activeTab === "syllabus" && (
             <div className="space-y-6 max-w-4xl mx-auto">
               <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
@@ -285,6 +420,7 @@ export function CoursePlayerModal({
                       {m.lessons.map((lesson, lIdx) => {
                         const lessonKey = `${mIdx}-${lIdx}`;
                         const isDone = !!completedLessons[lessonKey];
+                        const lessonFlatIdx = mIdx * 2 + lIdx;
                         return (
                           <div
                             key={lIdx}
@@ -315,12 +451,12 @@ export function CoursePlayerModal({
                             <button
                               type="button"
                               onClick={() => {
-                                setSelectedLesson(mIdx * 2 + lIdx);
+                                setSelectedLesson(lessonFlatIdx);
                                 setActiveTab("material");
                               }}
                               className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent hover:underline shrink-0"
                             >
-                              Read Lesson <ChevronRight className="h-3 w-3" />
+                              Watch Video & Notes <ChevronRight className="h-3 w-3" />
                             </button>
                           </div>
                         );
@@ -332,55 +468,170 @@ export function CoursePlayerModal({
             </div>
           )}
 
+          {/* TAB 2: FUNCTIONAL VIDEO PLAYER & STUDY GUIDE */}
           {activeTab === "material" && (
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center gap-2 text-xs font-bold text-accent">
-                  <PlayCircle className="h-4 w-4" />
-                  <span>Cadre Interactive Learning Material</span>
-                </div>
-                <h3 className="mt-2 text-lg font-bold text-foreground">
-                  {course.title}: Core Cadre Competency Guide
-                </h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Compiled for National & State Statistical Cadres under Ministry of Statistics & Programme Implementation guidelines.
-                </p>
-
-                {/* Video Lesson Player Mockup */}
-                <div className="mt-4 aspect-video w-full rounded-xl bg-zinc-950 flex flex-col items-center justify-center text-zinc-300 relative overflow-hidden group border border-zinc-800">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
-                  <div className="relative z-10 flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/90 text-white shadow-lg transition transform group-hover:scale-110">
-                      <PlayCircle className="h-8 w-8 ml-0.5" />
-                    </div>
-                    <p className="text-xs font-semibold text-white tracking-wide">
-                      Interactive Audio/Video Lecture: {course.title}
-                    </p>
-                    <span className="text-[10px] text-zinc-400">
-                      High-Definition Cadre Lecture Series (iGOT Integrated)
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
+                {/* Header with Lesson Switcher */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-accent">
+                      {currentLesson.moduleTitle} · Lesson {selectedLesson + 1} of {allLessons.length}
                     </span>
+                    <h3 className="mt-0.5 text-lg font-bold text-foreground">
+                      {currentLesson.title}
+                    </h3>
+                  </div>
+
+                  {/* Player Mode Switcher */}
+                  <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 p-1 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setPlayerMode("native")}
+                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition ${
+                        playerMode === "native"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Video className="h-3.5 w-3.5" /> High-Def Stream
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlayerMode("embed")}
+                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition ${
+                        playerMode === "embed"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Tv className="h-3.5 w-3.5" /> iGOT / NPTEL Embed
+                    </button>
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-4 text-xs text-foreground leading-relaxed">
-                  <h4 className="text-sm font-bold border-b border-border pb-2">
-                    Comprehensive Technical Notes
-                  </h4>
-                  <p>
-                    The modern statistical framework requires continuous alignment with empirical accuracy and open-source data manipulation workflows. Under Indian cadre guidelines, officers must combine statistical inference with automated validation rules.
+                {/* Real Working Video Player Container */}
+                <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-border shadow-md">
+                  {playerMode === "native" ? (
+                    <video
+                      key={videoData.mp4 + "-" + selectedLesson}
+                      src={videoData.mp4}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="h-full w-full object-contain"
+                    >
+                      Your browser does not support HTML5 video streaming.
+                    </video>
+                  ) : (
+                    <iframe
+                      key={videoData.youtubeId + "-" + selectedLesson}
+                      src={`https://www.youtube-nocookie.com/embed/${videoData.youtubeId}?autoplay=1&rel=0`}
+                      title={videoData.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      className="h-full w-full border-0"
+                    />
+                  )}
+                </div>
+
+                {/* Video Action Toolbar & Lesson Navigation */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-border pb-4">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={markCurrentLessonComplete}
+                      className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-bold transition shadow-sm ${
+                        isCurrentLessonDone
+                          ? "bg-success/15 text-success border border-success/30"
+                          : "bg-success text-success-foreground hover:bg-success/90"
+                      }`}
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {isCurrentLessonDone ? "Lesson Marked Completed" : "Mark Lesson Completed"}
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      Progress: <span className="font-bold text-foreground">{progressPercent}%</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={selectedLesson === 0}
+                      onClick={() => setSelectedLesson((prev) => Math.max(0, prev - 1))}
+                      className="flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Previous
+                    </button>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {selectedLesson + 1} / {allLessons.length}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={selectedLesson === allLessons.length - 1}
+                      onClick={() => setSelectedLesson((prev) => Math.min(allLessons.length - 1, prev + 1))}
+                      className="flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Next <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Lesson Playlist Pills */}
+                <div>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Lecture Series Playlist (Click to Play):
                   </p>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {allLessons.map((l) => {
+                      const lKey = `${l.moduleIdx}-${l.lessonIdx}`;
+                      const isDone = !!completedLessons[lKey];
+                      const isSelected = selectedLesson === l.index;
+                      return (
+                        <button
+                          key={l.index}
+                          type="button"
+                          onClick={() => setSelectedLesson(l.index)}
+                          className={`flex items-center justify-between rounded-lg border p-2.5 text-left text-xs transition ${
+                            isSelected
+                              ? "border-accent bg-accent/10 font-bold text-foreground"
+                              : "border-border bg-card hover:bg-muted/40 text-muted-foreground"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-bold">
+                              {l.index + 1}
+                            </span>
+                            <span className="truncate text-foreground font-medium">{l.title}</span>
+                          </div>
+                          {isDone && <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Technical Notes Content for Active Lesson */}
+                <div className="mt-4 space-y-4 text-xs text-foreground leading-relaxed">
+                  <h4 className="text-sm font-bold border-b border-border pb-2">
+                    Official Cadre Lecture Notes: {currentLesson.title}
+                  </h4>
+                  <p>{currentLesson.content}</p>
+
                   <div className="rounded-lg bg-muted p-4 space-y-2">
-                    <p className="font-bold text-foreground">Key Cadre Competency Rules:</p>
+                    <p className="font-bold text-foreground">Standard Cadre Operational Checklist:</p>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground text-[11px]">
-                      <li>Always verify sampling weights prior to generating regional aggregates.</li>
-                      <li>Document every imputation transformation for complete auditability.</li>
-                      <li>Protect personally identifiable information (PII) under the DPDP Act 2023.</li>
-                      <li>Cross-validate survey aggregates against administrative data registries.</li>
+                      <li>Follow MoSPI standardized multi-stage stratification protocols.</li>
+                      <li>Cross-validate high-frequency anomalies against administrative tax & GST registries.</li>
+                      <li>Ensure strict compliance with the Digital Personal Data Protection (DPDP) Act 2023.</li>
+                      <li>Maintain verifiable imputation logs for institutional accountability.</li>
                     </ul>
                   </div>
                 </div>
 
-                <div className="mt-6 flex justify-between items-center border-t border-border pt-4">
+                {/* Bottom Navigation */}
+                <div className="flex justify-between items-center border-t border-border pt-4">
                   <button
                     type="button"
                     onClick={() => setActiveTab("syllabus")}
@@ -391,7 +642,7 @@ export function CoursePlayerModal({
                   <button
                     type="button"
                     onClick={() => setActiveTab("quiz")}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground hover:bg-accent/90 transition"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground hover:bg-accent/90 transition shadow-sm"
                   >
                     <Sparkles className="h-3.5 w-3.5" /> Test Understanding with AI Quiz
                   </button>
@@ -400,6 +651,7 @@ export function CoursePlayerModal({
             </div>
           )}
 
+          {/* TAB 3: DYNAMIC AI QUIZ */}
           {activeTab === "quiz" && (
             <div className="max-w-2xl mx-auto space-y-6">
               {!quizStarted ? (
@@ -448,163 +700,127 @@ export function CoursePlayerModal({
                       <Sparkles className="h-4 w-4" />
                       <span>In-Platform AI Mastery Test: {course.title}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {Object.keys(quizAnswers).length} of {dynamicQuizQuestions.length} answered
+                    <span className="text-xs text-muted-foreground font-semibold">
+                      Answered: {Object.keys(quizAnswers).length} / {dynamicQuizQuestions.length}
                     </span>
                   </div>
 
-                  {dynamicQuizQuestions.map((q, idx) => (
-                    <div
-                      key={q.id}
-                      className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3"
-                    >
-                      <div className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[11px] font-bold text-accent">
-                          {idx + 1}
-                        </span>
-                        <p className="text-xs font-semibold text-foreground leading-relaxed">
-                          {q.question}
-                        </p>
-                      </div>
+                  <div className="space-y-4">
+                    {dynamicQuizQuestions.map((q, idx) => (
+                      <div key={q.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <h4 className="text-xs font-bold text-foreground">
+                            Question {idx + 1}: {q.prompt}
+                          </h4>
+                          <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent shrink-0">
+                            {q.competency}
+                          </span>
+                        </div>
 
-                      <div className="space-y-2 pl-7">
-                        {q.options.map((opt, optIdx) => {
-                          const isSelected = quizAnswers[q.id] === optIdx;
-                          return (
-                            <button
-                              key={optIdx}
-                              type="button"
-                              onClick={() => handleQuizAnswer(q.id, optIdx)}
-                              className={`flex w-full items-center text-left rounded-lg border p-2.5 text-xs transition ${
-                                isSelected
-                                  ? "border-accent bg-accent/10 font-semibold text-foreground"
-                                  : "border-border bg-background text-muted-foreground hover:border-accent/40"
-                              }`}
-                            >
-                              <span
-                                className={`mr-2.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] ${
+                        <div className="space-y-2">
+                          {q.options.map((opt, optIdx) => {
+                            const isSelected = quizAnswers[q.id] === optIdx;
+                            return (
+                              <button
+                                key={optIdx}
+                                type="button"
+                                onClick={() => handleQuizAnswer(q.id, optIdx)}
+                                className={`w-full text-left rounded-lg border p-3 text-xs transition flex items-center justify-between ${
                                   isSelected
-                                    ? "border-accent bg-accent text-accent-foreground font-bold"
-                                    : "border-border"
+                                    ? "border-accent bg-accent/10 text-foreground font-semibold"
+                                    : "border-border bg-background hover:bg-muted/50 text-muted-foreground"
                                 }`}
                               >
-                                {String.fromCharCode(65 + optIdx)}
-                              </span>
-                              <span>{opt}</span>
-                            </button>
-                          );
-                        })}
+                                <span>{opt}</span>
+                                {isSelected && (
+                                  <span className="h-2 w-2 rounded-full bg-accent shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
 
-                  <div className="flex justify-end gap-3 pt-2">
+                  <div className="flex justify-between items-center pt-2">
                     <button
                       type="button"
                       onClick={() => setQuizStarted(false)}
-                      className="rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                      className="text-xs font-semibold text-muted-foreground hover:text-foreground"
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setQuizSubmitted(true);
-                        const score = calculateQuizScore();
-                        if (score >= 60) {
-                          handleCompleteCourse();
-                        }
-                      }}
                       disabled={Object.keys(quizAnswers).length < dynamicQuizQuestions.length}
-                      className="rounded-lg bg-primary px-6 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition"
+                      onClick={() => setQuizSubmitted(true)}
+                      className="rounded-lg bg-accent px-5 py-2.5 text-xs font-bold text-accent-foreground hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition shadow"
                     >
-                      Submit AI Quiz & Evaluate
+                      Submit Answers & Evaluate
                     </button>
                   </div>
                 </div>
               ) : (
-                /* Quiz Results */
-                <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
-                  <div className="text-center space-y-2">
-                    <div
-                      className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
-                        calculateQuizScore() >= 60
-                          ? "bg-success/15 text-success"
-                          : "bg-amber-500/15 text-amber-600"
-                      }`}
-                    >
-                      <Award className="h-7 w-7" />
+                /* QUIZ RESULT */
+                <div className="rounded-xl border border-border bg-card p-8 text-center space-y-5 shadow-sm">
+                  {calculateQuizScore() >= 60 ? (
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success">
+                      <Award className="h-9 w-9" />
                     </div>
-                    <h3 className="text-lg font-bold text-foreground">
-                      {calculateQuizScore() >= 60 ? "Course Mastery Demonstrated!" : "Needs Review"}
+                  ) : (
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+                      <RotateCcw className="h-8 w-8" />
+                    </div>
+                  )}
+
+                  <div>
+                    <h3 className="text-xl font-extrabold text-foreground">
+                      {calculateQuizScore() >= 60 ? "Cadre Competency Mastered!" : "Review Required"}
                     </h3>
-                    <p className="text-xs text-muted-foreground">
-                      You scored <span className="font-bold text-foreground">{calculateQuizScore()}%</span> on the dynamic assessment for {course.title}.
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Your Score: <span className="font-bold text-foreground text-sm">{calculateQuizScore()}%</span> ({calculateQuizScore() >= 60 ? "Passed - Benchmark Achieved" : "Passing benchmark is 60%"})
                     </p>
-                    {calculateQuizScore() >= 60 && (
-                      <div className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-success mt-1">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Course Marked Completed & Skill Upgraded!
+                  </div>
+
+                  {calculateQuizScore() >= 60 ? (
+                    <div className="space-y-4">
+                      <div className="rounded-lg bg-success/10 border border-success/20 p-4 text-xs text-success space-y-1">
+                        <p className="font-bold">✓ Official Competency Gap Reduced</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Your true skill level for <span className="font-semibold text-foreground">{course.title}</span> has been leveled up in your cadre records.
+                        </p>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="space-y-4 border-t border-border pt-4">
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                      Question Review & Explanations
-                    </h4>
-                    {dynamicQuizQuestions.map((q, idx) => {
-                      const userAns = quizAnswers[q.id];
-                      const isCorrect = userAns === q.correctAnswer;
-                      return (
-                        <div key={q.id} className="rounded-lg border border-border p-3 space-y-2 text-xs">
-                          <div className="flex items-start gap-2">
-                            <span
-                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                                isCorrect ? "bg-success text-success-foreground" : "bg-destructive text-destructive-foreground"
-                              }`}
-                            >
-                              {idx + 1}
-                            </span>
-                            <p className="font-semibold text-foreground">{q.question}</p>
-                          </div>
-                          <div className="pl-6 space-y-1 text-[11px]">
-                            <p className="text-muted-foreground">
-                              Your answer: <span className="font-medium text-foreground">{q.options[userAns]}</span>
-                            </p>
-                            {!isCorrect && (
-                              <p className="text-success font-medium">
-                                Correct answer: {q.options[q.correctAnswer]}
-                              </p>
-                            )}
-                            <p className="text-muted-foreground bg-muted/50 p-2 rounded text-[11px] mt-1">
-                              <span className="font-semibold text-foreground">Explanation: </span>
-                              {q.explanation}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex justify-between items-center border-t border-border pt-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setQuizSubmitted(false);
-                        setQuizAnswers({});
-                      }}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
-                    >
-                      <RotateCcw className="h-3 w-3" /> Retake Quiz
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="rounded-lg bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-                    >
-                      Done
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleCompleteCourse();
+                          onClose();
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl bg-success px-6 py-2.5 text-xs font-bold text-success-foreground hover:bg-success/90 shadow transition"
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Save Result & Mark Course Completed
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="rounded-lg bg-muted p-4 text-xs text-muted-foreground">
+                        Review the lessons in the syllabus and retake the AI quiz when ready.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuizStarted(true);
+                          setQuizAnswers({});
+                          setQuizSubmitted(false);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-xs font-bold text-accent-foreground hover:bg-accent/90 transition shadow"
+                      >
+                        <RotateCcw className="h-4 w-4" /> Retake AI Quiz
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

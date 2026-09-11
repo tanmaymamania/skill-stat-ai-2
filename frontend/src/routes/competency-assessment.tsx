@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, FileText } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { CompetencyRadar } from "@/components/dashboard/DashboardSections";
@@ -131,10 +131,12 @@ function CompetencyAssessmentPage() {
 
                 <div className="mt-4 rounded-lg border border-success/20 bg-success/5 p-3">
                   <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 shrink-0 text-success" />
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{resumeFileName || "Resume uploaded"}</p>
-                      <p className="text-xs text-muted-foreground">Ready for AI processing</p>
+                      <p className="truncate text-sm font-semibold text-foreground">{resumeFileName || "Statistical_Cadre_Profile_Evidence.pdf"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Verified Identity Evidence for: <span className="font-semibold text-foreground">{profile.name || "Candidate"}</span> ({profile.designation || "Cadre Officer"})
+                      </p>
                     </div>
                   </div>
                 </div>

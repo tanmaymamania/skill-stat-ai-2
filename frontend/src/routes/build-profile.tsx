@@ -1,17 +1,35 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
+  AlertCircle,
+  AlertTriangle,
   ArrowRight,
   BriefcaseBusiness,
   Check,
+  CheckCircle2,
   FileText,
   GraduationCap,
+  Sparkles,
   Upload,
   UserRound,
   X,
 } from "lucide-react";
 import { StatSkillWordmark } from "@/components/StatSkillLogo";
 import { getCurrentUserProfile, saveCurrentUserProfile } from "@/lib/current-user";
+import { getActiveSession, switchActiveUser } from "@/lib/auth-service";
+import {
+  CADRE_JOB_ROLES,
+  CADRE_DEPARTMENTS,
+  CADRE_ASSIGNMENTS,
+  CADRE_QUALIFICATIONS,
+  CADRE_EXPERIENCE_LEVELS,
+  validateRoleInput,
+  validateNameInput,
+} from "@/lib/cadre-options";
+import {
+  verifyResumeCandidate,
+  type ResumeVerificationResult,
+} from "@/lib/resume-verifier";
 
 export const Route = createFileRoute("/build-profile")({
   head: () => ({
@@ -29,7 +47,9 @@ export const Route = createFileRoute("/build-profile")({
 type ProfileData = {
   name: string;
   designation: string;
+  customDesignation: string;
   department: string;
+  customDepartment: string;
   currentAssignment: string;
   highestQualification: string;
   yearsOfExperience: string;
@@ -40,14 +60,27 @@ function BuildProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData>(() => {
     const currentUser = getCurrentUserProfile();
+    const isStandardRole = (CADRE_JOB_ROLES as readonly string[]).includes(currentUser.designation);
+    const isStandardDept = (CADRE_DEPARTMENTS as readonly string[]).includes(currentUser.department);
+
     return {
-      name: currentUser.name,
-      designation: currentUser.designation,
-      department: currentUser.department,
-      currentAssignment: currentUser.currentAssignment,
-      highestQualification: currentUser.highestQualification,
-      yearsOfExperience: currentUser.yearsOfExperience,
-      previousTraining: currentUser.previousTraining,
+      name: currentUser.name || "",
+      designation: isStandardRole
+        ? currentUser.designation
+        : currentUser.designation
+          ? "Other"
+          : CADRE_JOB_ROLES[0],
+      customDesignation: isStandardRole ? "" : currentUser.designation || "",
+      department: isStandardDept
+        ? currentUser.department
+        : currentUser.department
+          ? "Other"
+          : CADRE_DEPARTMENTS[0],
+      customDepartment: isStandardDept ? "" : currentUser.department || "",
+      currentAssignment: currentUser.currentAssignment || CADRE_ASSIGNMENTS[0],
+      highestQualification: currentUser.highestQualification || CADRE_QUALIFICATIONS[0],
+      yearsOfExperience: currentUser.yearsOfExperience || CADRE_EXPERIENCE_LEVELS[1],
+      previousTraining: currentUser.previousTraining || "",
     };
   });
 
@@ -55,18 +88,47 @@ function BuildProfilePage() {
     () => getCurrentUserProfile().existingSkills,
   );
   const [workExperience, setWorkExperience] = useState(
-    () => getCurrentUserProfile().workExperience,
+    () => getCurrentUserProfile().workExperience || "Survey data collection, validation, analysis and official statistical reporting.",
   );
   const [newSkill, setNewSkill] = useState("");
+
+  // Resume & Identity Verification State
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [isVerifyingResume, setIsVerifyingResume] = useState(false);
+  const [resumeVerification, setResumeVerification] = useState<ResumeVerificationResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Effective Role (resolved from select or custom input)
+  const effectiveRole = profile.designation === "Other" ? profile.customDesignation : profile.designation;
+  const effectiveDepartment = profile.department === "Other" ? profile.customDepartment : profile.department;
+
+  // Real-time validations
+  const roleValidation = validateRoleInput(effectiveRole);
+  const nameValidation = validateNameInput(profile.name);
 
   const updateProfile = (field: keyof ProfileData, value: string) => {
     setProfile((current) => ({ ...current, [field]: value }));
   };
 
-  const addSkill = () => {
-    const skill = newSkill.trim();
+  // Re-verify resume when profile name changes if a file is uploaded
+  useEffect(() => {
+    if (resumeFile && profile.name.trim()) {
+      let active = true;
+      setIsVerifyingResume(true);
+      verifyResumeCandidate(resumeFile, profile.name).then((res) => {
+        if (active) {
+          setResumeVerification(res);
+          setIsVerifyingResume(false);
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }
+  }, [profile.name, resumeFile]);
+
+  const addSkill = (skillToAdd?: string) => {
+    const skill = (skillToAdd || newSkill).trim();
     if (!skill) return;
 
     const exists = existingSkills.some(
@@ -74,14 +136,14 @@ function BuildProfilePage() {
     );
 
     if (!exists) setExistingSkills((current) => [...current, skill]);
-    setNewSkill("");
+    if (!skillToAdd) setNewSkill("");
   };
 
   const removeSkill = (skill: string) => {
     setExistingSkills((current) => current.filter((item) => item !== skill));
   };
 
-  const validateResume = (file: File) => {
+  const validateResumeFormat = (file: File) => {
     const allowedExtensions = [".pdf", ".doc", ".docx"];
     const lowerName = file.name.toLowerCase();
     const valid = allowedExtensions.some((extension) =>
@@ -101,60 +163,111 @@ function BuildProfilePage() {
     return true;
   };
 
-  const handleResumeChange = (file?: File) => {
-    if (file && validateResume(file)) setResumeFile(file);
+  const handleResumeChange = async (file?: File) => {
+    if (!file) return;
+    if (!validateResumeFormat(file)) return;
+
+    setResumeFile(file);
+    setIsVerifyingResume(true);
+
+    try {
+      const verificationResult = await verifyResumeCandidate(file, profile.name);
+      setResumeVerification(verificationResult);
+    } finally {
+      setIsVerifyingResume(false);
+    }
+  };
+
+  const handleAdoptResumeName = () => {
+    if (resumeVerification?.detectedName) {
+      const newName = resumeVerification.detectedName;
+      updateProfile("name", newName);
+
+      // Also sync active user session
+      const currentSession = getActiveSession();
+      if (currentSession) {
+        switchActiveUser({
+          ...currentSession,
+          name: newName,
+        });
+      }
+    }
   };
 
   const handleGenerateAssessment = () => {
-    if (!profile.name.trim()) {
-      window.alert("Please enter your full name.");
+    // 1. Name Check
+    if (!nameValidation.isValid) {
+      window.alert(nameValidation.error || "Please enter a valid candidate name.");
       return;
     }
-    if (!profile.designation.trim()) {
-      window.alert("Please enter your designation or cadre role.");
+
+    // 2. Role Check
+    if (!roleValidation.isValid) {
+      window.alert(roleValidation.error || "Please select or enter a valid cadre role.");
       return;
     }
-    if (!profile.department.trim()) {
-      window.alert("Please enter your ministry or department.");
+
+    // 3. Department Check
+    if (!effectiveDepartment.trim()) {
+      window.alert("Please specify your ministry or department.");
       return;
     }
+
+    // 4. Skills Check
     if (existingSkills.length === 0) {
-      window.alert("Please add at least one skill you currently use so the AI can tailor your diagnostic assessment.");
+      window.alert("Please select or add at least one skill you currently use so the AI can tailor your diagnostic assessment.");
+      return;
+    }
+
+    // 5. Resume Name Mismatch Block
+    if (resumeVerification?.status === "mismatch") {
+      window.alert(
+        `Cannot proceed: The uploaded resume belongs to "${resumeVerification.detectedName}", but your account is registered as "${profile.name}". Please upload your own resume or update your account name to match.`
+      );
       return;
     }
 
     saveCurrentUserProfile({
-      ...profile,
-      currentAssignment: profile.currentAssignment.trim() || "Statistical Cadre Operations",
-      highestQualification: profile.highestQualification.trim() || "Post Graduate / Master's Degree",
-      yearsOfExperience: profile.yearsOfExperience.trim() || "3+ Years",
+      name: profile.name.trim(),
+      designation: effectiveRole.trim(),
+      department: effectiveDepartment.trim(),
+      currentAssignment: profile.currentAssignment.trim(),
+      highestQualification: profile.highestQualification.trim(),
+      yearsOfExperience: profile.yearsOfExperience.trim(),
+      previousTraining: profile.previousTraining.trim() || "MoSPI Cadre Baseline Training",
       existingSkills,
       workExperience: workExperience.trim() || "Survey data collection, validation, analysis and official statistical reporting.",
       resumeFileName: resumeFile ? resumeFile.name : "Statistical_Officer_Cadre_Profile.pdf",
     });
 
-    // Direct officer to AI quiz tailored to their declared skills
+    // Navigate to dynamic AI diagnostic assessment
     navigate({ to: "/ai-assessment-quiz" });
   };
 
   const profileItems = [
     {
-      label: "Professional details",
-      done:
-        profile.name.trim().length > 0 &&
-        profile.designation.trim().length > 0 &&
-        profile.department.trim().length > 0 &&
-        profile.currentAssignment.trim().length > 0,
+      label: "Candidate Name",
+      done: nameValidation.isValid,
     },
     {
-      label: "Education & experience",
-      done:
-        profile.highestQualification.trim().length > 0 &&
-        profile.yearsOfExperience.trim().length > 0,
+      label: "Cadre Designation & Role",
+      done: roleValidation.isValid,
     },
-    { label: "Resume", done: Boolean(resumeFile) },
-    { label: "Skills", done: existingSkills.length > 0 },
-    { label: "Work experience", done: workExperience.trim().length > 0 },
+    {
+      label: "Ministry & Department",
+      done: effectiveDepartment.trim().length > 0,
+    },
+    {
+      label: "Assignment & Education",
+      done:
+        profile.currentAssignment.trim().length > 0 &&
+        profile.highestQualification.trim().length > 0,
+    },
+    {
+      label: "Resume Verification",
+      done: Boolean(resumeFile) && resumeVerification?.status !== "mismatch",
+    },
+    { label: "Skills Selected", done: existingSkills.length > 0 },
   ];
 
   const completedItems = profileItems.filter((item) => item.done).length;
@@ -177,7 +290,7 @@ function BuildProfilePage() {
               Build Your Competency Profile
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Add your professional details and resume to establish your starting competency.
+              Select your official Cadre role, department, and verify your credentials for your personalized AI assessment.
             </p>
           </section>
 
@@ -187,31 +300,175 @@ function BuildProfilePage() {
                 <div className="flex items-center justify-between border-b border-border pb-4">
                   <div>
                     <h2 className="text-lg font-bold text-foreground">
-                      Profile & Evidence
+                      Cadre Identity & Credentials
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Information used for the initial AI assessment.
+                      Information verified against official civil service benchmarks.
                     </p>
                   </div>
                   <UserRound className="h-5 w-5 text-muted-foreground" />
                 </div>
 
                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <ProfileInput label="Full Name" value={profile.name} placeholder="e.g. Ananya Sharma" onChange={(value) => updateProfile("name", value)} />
-                  <ProfileInput label="Designation" value={profile.designation} placeholder="e.g. Deputy Statistical Officer" onChange={(value) => updateProfile("designation", value)} />
-                  <ProfileInput label="Department" value={profile.department} placeholder="e.g. Directorate of Economics & Statistics" onChange={(value) => updateProfile("department", value)} />
-                  <ProfileInput label="Current Assignment" value={profile.currentAssignment} placeholder="e.g. Survey Operations & Data Analysis" onChange={(value) => updateProfile("currentAssignment", value)} />
-                  <ProfileInput label="Highest Qualification" value={profile.highestQualification} placeholder="e.g. M.Sc. Statistics" onChange={(value) => updateProfile("highestQualification", value)} />
-                  <ProfileInput label="Years of Experience" value={profile.yearsOfExperience} placeholder="e.g. 3.5 years" onChange={(value) => updateProfile("yearsOfExperience", value)} />
-                  <ProfileInput label="Previous Training" value={profile.previousTraining} placeholder="e.g. Survey Methods, Data Quality" onChange={(value) => updateProfile("previousTraining", value)} />
+                  {/* Full Name with Validation */}
+                  <div>
+                    <label className="text-xs font-bold text-foreground">
+                      Full Name <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      value={profile.name}
+                      onChange={(e) => updateProfile("name", e.target.value)}
+                      placeholder="e.g. Tanmay Mamania"
+                      className={`mt-1.5 w-full rounded-lg border bg-background px-3.5 py-2.5 text-xs text-foreground outline-none transition placeholder:text-muted-foreground focus:ring-2 ${
+                        profile.name && !nameValidation.isValid
+                          ? "border-destructive focus:ring-destructive/20"
+                          : "border-border focus:border-accent focus:ring-accent/10"
+                      }`}
+                    />
+                    {profile.name && !nameValidation.isValid && (
+                      <p className="mt-1 text-[11px] text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> {nameValidation.error}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Cadre Designation / Job Role (Select with Variety of Options) */}
+                  <div>
+                    <label className="text-xs font-bold text-foreground">
+                      Cadre Job Role / Designation <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={profile.designation}
+                      onChange={(e) => updateProfile("designation", e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
+                    >
+                      {CADRE_JOB_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                      <option value="Other">Other (Custom Cadre Designation)...</option>
+                    </select>
+
+                    {/* Custom Role Input with Strict Validation */}
+                    {profile.designation === "Other" && (
+                      <div className="mt-2">
+                        <input
+                          value={profile.customDesignation}
+                          onChange={(e) => updateProfile("customDesignation", e.target.value)}
+                          placeholder="Enter custom designation (e.g. Junior Research Fellow)"
+                          className={`w-full rounded-lg border bg-background px-3 py-2 text-xs text-foreground outline-none transition ${
+                            profile.customDesignation && !roleValidation.isValid
+                              ? "border-destructive focus:ring-destructive/20"
+                              : "border-border focus:border-accent"
+                          }`}
+                        />
+                        {profile.customDesignation && !roleValidation.isValid && (
+                          <p className="mt-1 text-[11px] text-destructive flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" /> {roleValidation.error}
+                          </p>
+                        )}
+                        {profile.customDesignation && roleValidation.isValid && (
+                          <p className="mt-1 text-[11px] text-success flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Recognized role title format.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ministry / Department (Select with Variety of Options) */}
+                  <div>
+                    <label className="text-xs font-bold text-foreground">
+                      Ministry / Department <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={profile.department}
+                      onChange={(e) => updateProfile("department", e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
+                    >
+                      {CADRE_DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                      <option value="Other">Other Department / Directorate...</option>
+                    </select>
+
+                    {profile.department === "Other" && (
+                      <input
+                        value={profile.customDepartment}
+                        onChange={(e) => updateProfile("customDepartment", e.target.value)}
+                        placeholder="Enter ministry or department name"
+                        className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground outline-none transition focus:border-accent"
+                      />
+                    )}
+                  </div>
+
+                  {/* Current Assignment (Select with Options) */}
+                  <div>
+                    <label className="text-xs font-bold text-foreground">
+                      Current Cadre Assignment
+                    </label>
+                    <select
+                      value={profile.currentAssignment}
+                      onChange={(e) => updateProfile("currentAssignment", e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
+                    >
+                      {CADRE_ASSIGNMENTS.map((asg) => (
+                        <option key={asg} value={asg}>
+                          {asg}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Highest Qualification */}
+                  <div>
+                    <label className="text-xs font-bold text-foreground">
+                      Highest Qualification
+                    </label>
+                    <select
+                      value={profile.highestQualification}
+                      onChange={(e) => updateProfile("highestQualification", e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
+                    >
+                      {CADRE_QUALIFICATIONS.map((q) => (
+                        <option key={q} value={q}>
+                          {q}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Years of Experience */}
+                  <div>
+                    <label className="text-xs font-bold text-foreground">
+                      Cadre Experience
+                    </label>
+                    <select
+                      value={profile.yearsOfExperience}
+                      onChange={(e) => updateProfile("yearsOfExperience", e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
+                    >
+                      {CADRE_EXPERIENCE_LEVELS.map((exp) => (
+                        <option key={exp} value={exp}>
+                          {exp}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
+                {/* Resume Upload & Candidate Name Verification Section */}
                 <div className="mt-6 border-t border-border pt-6">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-bold text-foreground">Resume / CV</h3>
+                      <h3 className="text-sm font-bold text-foreground">
+                        Resume / Cadre Evidence Verification
+                      </h3>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        PDF, DOC or DOCX · Maximum 10 MB
+                        PDF, DOC or DOCX · Candidate identity is cross-checked against your profile name.
                       </p>
                     </div>
                     <FileText className="h-5 w-5 text-muted-foreground" />
@@ -245,29 +502,136 @@ function BuildProfilePage() {
                         <Upload className="h-5 w-5" />
                       </div>
                       <p className="mt-3 text-sm font-semibold text-foreground">Upload your resume</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Drag & drop or click to choose</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Drag & drop or click to choose (PDF, DOCX)</p>
                     </label>
                   ) : (
-                    <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-success/20 bg-success/5 px-4 py-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <FileText className="h-5 w-5 shrink-0 text-success" />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground">{resumeFile.name}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">Ready for assessment</p>
+                    <div className="mt-4 space-y-3">
+                      {/* File Card with Verification Details */}
+                      <div
+                        className={`rounded-xl border p-4 transition ${
+                          resumeVerification?.status === "mismatch"
+                            ? "border-destructive/30 bg-destructive/5"
+                            : resumeVerification?.status === "verified"
+                              ? "border-success/30 bg-success/5"
+                              : "border-border bg-muted/30"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                                resumeVerification?.status === "mismatch"
+                                  ? "bg-destructive/20 text-destructive"
+                                  : "bg-success/20 text-success"
+                              }`}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">{resumeFile.name}</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                Size: {(resumeFile.size / 1024).toFixed(1)} KB
+                              </p>
+
+                              {/* Identity Check Status */}
+                              {isVerifyingResume ? (
+                                <p className="mt-2 text-xs font-semibold text-accent animate-pulse">
+                                  Cross-checking candidate identity on document...
+                                </p>
+                              ) : resumeVerification?.status === "mismatch" ? (
+                                <div className="mt-2 space-y-2">
+                                  <div className="flex items-start gap-1.5 text-xs font-semibold text-destructive">
+                                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                                    <span>{resumeVerification.message}</span>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    To maintain authentic MoSPI civil service competency records, the uploaded resume must belong to the logged-in candidate.
+                                  </p>
+                                  <div className="flex flex-wrap gap-2 pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setResumeFile(null);
+                                        setResumeVerification(null);
+                                      }}
+                                      className="rounded-lg border border-destructive/30 bg-background px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                                    >
+                                      Upload My Own Resume
+                                    </button>
+                                    {resumeVerification.detectedName && (
+                                      <button
+                                        type="button"
+                                        onClick={handleAdoptResumeName}
+                                        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent/90"
+                                      >
+                                        Update Account Name to "{resumeVerification.detectedName}"
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-success">
+                                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                  <span>{resumeVerification?.message || "Resume verified."}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResumeFile(null);
+                              setResumeVerification(null);
+                            }}
+                            className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            aria-label="Remove resume"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
+
+                        {/* Extracted Skills Helper */}
+                        {resumeVerification && resumeVerification.detectedSkills.length > 0 && (
+                          <div className="mt-3 border-t border-border/50 pt-3">
+                            <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                              <Sparkles className="h-3.5 w-3.5 text-accent" />
+                              AI detected competencies from this resume:
+                            </p>
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              {resumeVerification.detectedSkills.map((sk) => {
+                                const hasSkill = existingSkills.includes(sk);
+                                return (
+                                  <button
+                                    key={sk}
+                                    type="button"
+                                    onClick={() => addSkill(sk)}
+                                    className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
+                                      hasSkill
+                                        ? "border-success bg-success/10 text-success"
+                                        : "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20"
+                                    }`}
+                                  >
+                                    {hasSkill ? `✓ ${sk}` : `+ Add ${sk}`}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <button type="button" onClick={() => setResumeFile(null)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Remove resume">
-                        <X className="h-4 w-4" />
-                      </button>
                     </div>
                   )}
                 </div>
 
+                {/* Existing Skills Section */}
                 <div className="mt-6 border-t border-border pt-6">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-bold text-foreground">Existing Skills</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">Add the skills you currently use.</p>
+                      <h3 className="text-sm font-bold text-foreground">Declared Competencies & Skills</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Select all skills you currently use. The AI engine will dynamically generate diagnostic questions targeting these areas.
+                      </p>
                     </div>
                     <GraduationCap className="h-5 w-5 text-muted-foreground" />
                   </div>
@@ -275,9 +639,17 @@ function BuildProfilePage() {
                   {existingSkills.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {existingSkills.map((skill) => (
-                        <span key={skill} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-foreground">
+                        <span
+                          key={skill}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-foreground"
+                        >
                           {skill}
-                          <button type="button" onClick={() => removeSkill(skill)} aria-label={`Remove ${skill}`} className="text-muted-foreground hover:text-foreground">
+                          <button
+                            type="button"
+                            onClick={() => removeSkill(skill)}
+                            aria-label={`Remove ${skill}`}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
                             <X className="h-3 w-3" />
                           </button>
                         </span>
@@ -295,16 +667,20 @@ function BuildProfilePage() {
                           addSkill();
                         }
                       }}
-                      className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/10"
-                      placeholder="e.g. Python, GIS, Survey Design"
+                      className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/10"
+                      placeholder="Add custom competency (e.g. Econometric Modeling, PowerBI)"
                     />
-                    <button type="button" onClick={addSkill} className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+                    <button
+                      type="button"
+                      onClick={() => addSkill()}
+                      className="rounded-lg border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                    >
                       Add
                     </button>
                   </div>
 
                   <div className="mt-3">
-                    <p className="text-[11px] font-medium text-muted-foreground">Suggested skills (click to add):</p>
+                    <p className="text-[11px] font-medium text-muted-foreground">Standard Cadre Competencies (click to select):</p>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {[
                         "Survey Sampling",
@@ -316,20 +692,22 @@ function BuildProfilePage() {
                         "Digital Data Governance",
                       ].map((s) => {
                         const selected = existingSkills.some(
-                          (skill) => skill.toLowerCase() === s.toLowerCase()
+                          (skill) => skill.toLowerCase() === s.toLowerCase(),
                         );
                         return (
                           <button
                             key={s}
                             type="button"
                             onClick={() => {
-                              if (!selected) {
-                                setExistingSkills((curr) => [...curr, s]);
+                              if (selected) {
+                                removeSkill(s);
+                              } else {
+                                addSkill(s);
                               }
                             }}
                             className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition ${
                               selected
-                                ? "border-accent bg-accent-soft text-accent font-semibold"
+                                ? "border-accent bg-accent/15 text-accent font-semibold"
                                 : "border-border bg-card text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
                             }`}
                           >
@@ -341,11 +719,12 @@ function BuildProfilePage() {
                   </div>
                 </div>
 
+                {/* Work Experience */}
                 <div className="mt-6 border-t border-border pt-6">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-bold text-foreground">Work Experience</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">Responsibilities, projects, tools and statistical work.</p>
+                      <h3 className="text-sm font-bold text-foreground">Cadre Experience & Past Work</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">Responsibilities, projects, surveys, and analytical workflows.</p>
                     </div>
                     <BriefcaseBusiness className="h-5 w-5 text-muted-foreground" />
                   </div>
@@ -353,22 +732,28 @@ function BuildProfilePage() {
                   <textarea
                     value={workExperience}
                     onChange={(event) => setWorkExperience(event.target.value)}
-                    rows={5}
+                    rows={4}
                     maxLength={2000}
-                    className="mt-4 w-full resize-none rounded-xl border border-border bg-background p-4 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/10"
-                    placeholder="Describe your responsibilities and relevant work..."
+                    className="mt-3 w-full resize-none rounded-xl border border-border bg-background p-3 text-xs leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/10"
+                    placeholder="Describe your responsibilities, surveys managed, and analytical tools used..."
                   />
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>Used as assessment evidence</span>
-                    <span>{workExperience.length}/2000</span>
-                  </div>
                 </div>
 
+                {/* Bottom Action Bar */}
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border pt-6">
                   <p className="text-xs text-muted-foreground">
-                    Your skills will be used by the AI engine to generate your diagnostic quiz.
+                    Your verified profile and skills determine the 10 diagnostic questions in your AI quiz.
                   </p>
-                  <button type="button" onClick={handleGenerateAssessment} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent/90">
+                  <button
+                    type="button"
+                    onClick={handleGenerateAssessment}
+                    disabled={resumeVerification?.status === "mismatch"}
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-5 py-2.5 text-xs font-bold transition shadow ${
+                      resumeVerification?.status === "mismatch"
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : "bg-accent text-accent-foreground hover:bg-accent/90"
+                    }`}
+                  >
                     Save Profile & Start AI Quiz
                     <ArrowRight className="h-4 w-4" />
                   </button>
@@ -376,61 +761,52 @@ function BuildProfilePage() {
               </div>
             </section>
 
+            {/* Sidebar Completion Checklist */}
             <aside className="xl:col-span-4">
-              <div className="sticky top-24 rounded-xl border border-border bg-card p-5 shadow-sm">
+              <div className="sticky top-24 rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Profile</p>
-                    <h2 className="mt-1 text-lg font-bold text-foreground">Completion</h2>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Cadre Profile</p>
+                    <h2 className="mt-0.5 text-lg font-bold text-foreground">Readiness</h2>
                   </div>
-                  <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">{profileCompletion}%</span>
+                  <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-bold text-accent">
+                    {profileCompletion}%
+                  </span>
                 </div>
 
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${profileCompletion}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-accent transition-all duration-300"
+                    style={{ width: `${profileCompletion}%` }}
+                  />
                 </div>
 
-                <div className="mt-5 space-y-2">
+                <div className="divide-y divide-border/60 text-xs">
                   {profileItems.map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 text-sm">
-                      <span className={item.done ? "text-foreground" : "text-muted-foreground"}>{item.label}</span>
+                    <div key={item.label} className="flex items-center justify-between py-2.5">
+                      <span className={item.done ? "text-foreground font-medium" : "text-muted-foreground"}>
+                        {item.label}
+                      </span>
                       {item.done ? (
-                        <Check className="h-4 w-4 text-success" />
+                        <Check className="h-4 w-4 text-success shrink-0" />
                       ) : (
-                        <span className="text-[11px] font-semibold text-muted-foreground">Pending</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground">Required</span>
                       )}
                     </div>
                   ))}
                 </div>
+
+                {resumeVerification?.status === "mismatch" && (
+                  <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>Action required: Upload your own resume or update profile name to proceed.</span>
+                  </div>
+                )}
               </div>
             </aside>
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-function ProfileInput({
-  label,
-  value,
-  placeholder,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  placeholder: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div>
-      <label className="text-sm font-semibold text-foreground">{label}</label>
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-lg border border-border bg-background px-3.5 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/10"
-        placeholder={placeholder}
-      />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   AlertCircle,
+  Briefcase,
+  Building2,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -13,6 +15,12 @@ import {
 } from "lucide-react";
 import { StatSkillWordmark } from "@/components/StatSkillLogo";
 import { loginUser, registerUser, loginWithGooglePayload, parseGoogleJwt } from "@/lib/auth-service";
+import {
+  CADRE_JOB_ROLES,
+  CADRE_DEPARTMENTS,
+  validateRoleInput,
+  validateNameInput,
+} from "@/lib/cadre-options";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -41,6 +49,10 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [cadreRole, setCadreRole] = useState<string>(CADRE_JOB_ROLES[0]);
+  const [customCadreRole, setCustomCadreRole] = useState("");
+  const [cadreDept, setCadreDept] = useState<string>(CADRE_DEPARTMENTS[0]);
+  const [customCadreDept, setCustomCadreDept] = useState("");
 
   // UI state
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -136,10 +148,26 @@ function LoginPage() {
       window.location.href = hasSkills ? "/ai-assessment-quiz" : "/build-profile";
     } else {
       // REAL REGISTRATION
-      if (!name.trim()) {
-        setErrorMessage("Please enter your full name.");
+      const nameCheck = validateNameInput(name);
+      if (!nameCheck.isValid) {
+        setErrorMessage(nameCheck.error || "Please enter your full candidate name.");
         return;
       }
+
+      const effectiveRole = cadreRole === "Other" ? customCadreRole : cadreRole;
+      const effectiveDept = cadreDept === "Other" ? customCadreDept : cadreDept;
+
+      const roleCheck = validateRoleInput(effectiveRole);
+      if (!roleCheck.isValid) {
+        setErrorMessage(roleCheck.error || "Please select or enter a valid cadre job role.");
+        return;
+      }
+
+      if (!effectiveDept.trim()) {
+        setErrorMessage("Please select or enter your ministry or department.");
+        return;
+      }
+
       if (password !== confirmPassword) {
         setErrorMessage("Passwords do not match. Please verify your password confirmation.");
         return;
@@ -149,7 +177,7 @@ function LoginPage() {
         return;
       }
 
-      const res = registerUser(name, email, password);
+      const res = registerUser(name, email, password, effectiveRole.trim(), effectiveDept.trim());
       if (!res.success) {
         setErrorMessage(res.error || "Registration failed.");
         return;
@@ -244,23 +272,85 @@ function LoginPage() {
 
         <form className="space-y-4" onSubmit={handleFormSubmit}>
           {mode === "signup" && (
-            <div>
-              <label htmlFor="name" className="text-xs font-semibold text-foreground">
-                Full Name
-              </label>
-              <div className="relative mt-1.5">
-                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Tanmay Mamania"
-                  required
-                  className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
-                />
+            <>
+              <div>
+                <label htmlFor="name" className="text-xs font-semibold text-foreground">
+                  Full Name
+                </label>
+                <div className="relative mt-1.5">
+                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Tanmay Mamania"
+                    required
+                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs text-foreground outline-none transition placeholder:text-muted-foreground focus:border-accent focus:ring-1 focus:ring-accent"
+                  />
+                </div>
               </div>
-            </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground">
+                  Cadre Job Role / Designation
+                </label>
+                <div className="relative mt-1.5">
+                  <Briefcase className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <select
+                    value={cadreRole}
+                    onChange={(e) => setCadreRole(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+                  >
+                    {CADRE_JOB_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                    <option value="Other">Other (Custom Designation)...</option>
+                  </select>
+                </div>
+                {cadreRole === "Other" && (
+                  <input
+                    type="text"
+                    value={customCadreRole}
+                    onChange={(e) => setCustomCadreRole(e.target.value)}
+                    placeholder="Enter official designation (e.g. Research Specialist)"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-accent"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground">
+                  Ministry / Department
+                </label>
+                <div className="relative mt-1.5">
+                  <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <select
+                    value={cadreDept}
+                    onChange={(e) => setCadreDept(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+                  >
+                    {CADRE_DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                    <option value="Other">Other Department...</option>
+                  </select>
+                </div>
+                {cadreDept === "Other" && (
+                  <input
+                    type="text"
+                    value={customCadreDept}
+                    onChange={(e) => setCustomCadreDept(e.target.value)}
+                    placeholder="Enter ministry or department name"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-accent"
+                  />
+                )}
+              </div>
+            </>
           )}
 
           <div>
