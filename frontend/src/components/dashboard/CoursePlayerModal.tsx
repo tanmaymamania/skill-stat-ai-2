@@ -78,7 +78,7 @@ const TOPIC_VIDEO_SOURCES: Record<
   },
   accounts: {
     mp4: "https://media.w3.org/2010/05/sintel/trailer.mp4",
-    youtubeId: "d8uTB5XorBw",
+    youtubeId: "45ijJXd2YYE",
     title: "National Accounts Compilation, GSDP Deflators & Economic Indicators",
     providerBadge: "Central Statistics Office / UN-SD",
   },
@@ -96,7 +96,7 @@ const TOPIC_VIDEO_SOURCES: Record<
   },
   governance: {
     mp4: "https://media.w3.org/2010/05/sintel/trailer.mp4",
-    youtubeId: "d8uTB5XorBw",
+    youtubeId: "86kj772sZ4E",
     title: "Digital Data Governance, DPDP Act 2023 & Statistical Confidentiality",
     providerBadge: "NITI Aayog / NSSTA",
   },
@@ -1043,32 +1043,44 @@ export function CoursePlayerModal({
                   </div>
 
                   {/* Player Mode Switcher */}
-                  <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 p-1 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlayerMode("embed");
-                        setVideoError(false);
-                      }}
-                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition ${
-                        playerMode === "embed"
-                          ? "bg-card text-foreground shadow-sm font-bold"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 p-1 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPlayerMode("embed");
+                          setVideoError(false);
+                        }}
+                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition ${
+                          playerMode === "embed"
+                            ? "bg-card text-foreground shadow-sm font-bold"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Tv className="h-3.5 w-3.5" /> iGOT / NPTEL Embed
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPlayerMode("native")}
+                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition ${
+                          playerMode === "native"
+                            ? "bg-card text-foreground shadow-sm font-bold"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Video className="h-3.5 w-3.5" /> High-Def Stream
+                      </button>
+                    </div>
+
+                    <a
+                      href={`https://www.youtube.com/watch?v=${videoData.youtubeId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-[11px] font-semibold text-accent hover:bg-accent/10 transition"
+                      title="Open source video directly in a new tab"
                     >
-                      <Tv className="h-3.5 w-3.5" /> iGOT / NPTEL Embed
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPlayerMode("native")}
-                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition ${
-                        playerMode === "native"
-                          ? "bg-card text-foreground shadow-sm font-bold"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Video className="h-3.5 w-3.5" /> High-Def Stream
-                    </button>
+                      <ExternalLink className="h-3.5 w-3.5" /> Watch on YouTube
+                    </a>
                   </div>
                 </div>
 
@@ -1078,7 +1090,7 @@ export function CoursePlayerModal({
                     // 1. 100% Working Verified Embed from iGOT / NPTEL / Academic Repositories
                     <iframe
                       key={videoData.youtubeId + "-" + selectedLesson}
-                      src={`https://www.youtube-nocookie.com/embed/${videoData.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+                      src={`https://www.youtube.com/embed/${videoData.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
                       title={videoData.title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen

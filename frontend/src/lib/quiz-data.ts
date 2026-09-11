@@ -27,7 +27,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "Stratified sampling divides a population into relevant subgroups, or strata, and then selects samples from those groups. This can improve representation and sampling efficiency.",
-    competency: "Survey Sampling",,
+    competency: "Survey Sampling",
   },
     {
     id: 2,
@@ -42,7 +42,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "Systematic validation and quality checks help identify errors, inconsistencies, missing values, and other issues during the statistical production process.",
-    competency: "Data Quality",,
+    competency: "Data Quality",
   },
     {
     id: 3,
@@ -57,7 +57,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "Python libraries such as pandas are widely used for cleaning, transforming, filtering, and analysing structured datasets.",
-    competency: "Python",,
+    competency: "Python",
   },
     {
     id: 4,
@@ -72,7 +72,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "Metadata helps users understand what the data represents, how it was produced, and how concepts and classifications should be interpreted.",
-    competency: "Metadata Standards",,
+    competency: "Metadata Standards",
   },
     {
     id: 5,
@@ -87,7 +87,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "Documented and traceable processing steps make statistical workflows easier to reproduce, review, validate, and maintain.",
-    competency: "Statistical Data Processing",,
+    competency: "Statistical Data Processing",
   },
     {
     id: 6,
@@ -102,7 +102,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "Competency-based assessment looks at demonstrated knowledge and capability in relation to defined competency expectations or role requirements.",
-    competency: "Competency Assessment",,
+    competency: "Competency Assessment",
   },
     {
     id: 7,
@@ -117,7 +117,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "A sampling frame provides the operational list or structure from which sample units can be selected.",
-    competency: "Survey Sampling",,
+    competency: "Survey Sampling",
   },
     {
     id: 8,
@@ -132,7 +132,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "The mean is a common measure of central tendency and is calculated by dividing the sum of observations by the number of observations.",
-    competency: "Statistical Analysis",,
+    competency: "Statistical Analysis",
   },
     {
     id: 9,
@@ -147,7 +147,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "Validation rules identify entries that do not satisfy expected ranges, relationships, formats, or consistency conditions.",
-    competency: "Data Quality",,
+    competency: "Data Quality",
   },
     {
     id: 10,
@@ -162,7 +162,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "A Python list is an ordered and mutable collection that can store multiple values.",
-    competency: "Python",,
+    competency: "Python",
   },
     {
     id: 11,
@@ -177,7 +177,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "SQL is used to retrieve, filter, aggregate, insert, update, and otherwise manipulate data stored in relational databases.",
-    competency: "SQL",,
+    competency: "SQL",
   },
     {
     id: 12,
@@ -192,7 +192,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "Good documentation helps users and reviewers understand methods, decisions, transformations, and sources used during statistical production.",
-    competency: "Statistical Processes",,
+    competency: "Statistical Processes",
   },
     {
     id: 13,
@@ -207,7 +207,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "Well-designed visualizations help analysts and stakeholders recognize patterns, trends, distributions, and comparisons more quickly.",
-    competency: "Data Visualization",,
+    competency: "Data Visualization",
   },
     {
     id: 14,
@@ -222,7 +222,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "Metadata is structured information that describes data, including concepts, definitions, sources, methods, and other contextual information.",
-    competency: "Metadata Standards",,
+    competency: "Metadata Standards",
   },
     {
     id: 15,
@@ -237,7 +237,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "Survey weights can account for selection probabilities and other design features so that estimates better represent the target population.",
-    competency: "Survey Sampling",,
+    competency: "Survey Sampling",
   },
     {
     id: 16,
@@ -252,7 +252,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "Missing data should be investigated and handled using an appropriate, documented method based on the context and analytical requirements.",
-    competency: "Data Quality",,
+    competency: "Data Quality",
   },
     {
     id: 17,
@@ -267,7 +267,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "A data dictionary provides structured information about dataset fields, including names, meanings, formats, and allowed values.",
-    competency: "Data Management",,
+    competency: "Data Management",
   },
     {
     id: 18,
@@ -282,7 +282,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "Department represents categories or groups, whereas income, age, and expenditure are numerical variables.",
-    competency: "Statistical Analysis",,
+    competency: "Statistical Analysis",
   },
     {
     id: 19,
@@ -297,7 +297,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "Version control records changes to code and related files, making analytical workflows easier to review, reproduce, and maintain.",
-    competency: "Technical & Analytical",,
+    competency: "Technical & Analytical",
   },
     {
     id: 20,
@@ -312,7 +312,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "Official statistical findings should be communicated accurately and transparently, with enough context for users to interpret them appropriately.",
-    competency: "Statistical Communication",,
+    competency: "Statistical Communication",
   },
     {
     id: 21,
@@ -327,7 +327,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "Geospatial joins integrate attribute survey micro-data with administrative spatial boundary polygons to produce spatial heatmaps, regional disaggregations, and PM Gati Shakti GIS layers.",
-    competency: "GIS & Spatial Mapping",,
+    competency: "GIS & Spatial Mapping",
   },
     {
     id: 22,
@@ -342,7 +342,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "The DPDP Act 2023 mandates strict purpose limitation, respondent consent, robust pseudonymisation/anonymisation, and cryptographic protection of PII in government statistical systems.",
-    competency: "Digital Data Governance",,
+    competency: "Digital Data Governance",
   },
     {
     id: 23,
@@ -357,7 +357,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "Constant price GSDP estimates real economic output by using base-year weighted price indices or deflators to remove inflation/price volatility from current price Gross Value Added.",
-    competency: "National Accounts & GSDP",,
+    competency: "National Accounts & GSDP",
   },
     {
     id: 24,
@@ -372,7 +372,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "SQL JOIN operations (INNER, LEFT, FULL) link relational survey tables such as household demographic rosters and individual employment records via shared unique keys.",
-    competency: "SQL & Data Management",,
+    competency: "SQL & Data Management",
   },
     {
     id: 25,
@@ -387,7 +387,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "PPS sampling ensures that clusters with larger sizes (census population or households) have selection probabilities proportional to size, leading to self-weighting designs and lower variance.",
-    competency: "Survey Sampling",,
+    competency: "Survey Sampling",
   },
     {
     id: 26,
@@ -402,7 +402,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "India's headline CPI uses a base-weighted Laspeyres-type aggregation formula (modified Laspeyres), comparing current prices to base period prices weighted by base consumer expenditure shares.",
-    competency: "National Accounts & GSDP",,
+    competency: "National Accounts & GSDP",
   },
     {
     id: 27,
@@ -417,7 +417,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "A p-value is the probability of obtaining test results at least as extreme as the observed data, assuming the null hypothesis is true. A p < 0.05 indicates statistical significance at alpha = 0.05.",
-    competency: "Statistical Analysis",,
+    competency: "Statistical Analysis",
   },
     {
     id: 28,
@@ -432,7 +432,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "Official agencies use seasonal adjustment methods like X-13ARIMA-SEATS to separate seasonal fluctuations and calendar holiday effects from underlying trend-cycle movements.",
-    competency: "Statistical Analysis",,
+    competency: "Statistical Analysis",
   },
     {
     id: 29,
@@ -447,7 +447,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "Hot-deck imputation replaces missing values with observed responses from a 'donor' unit sharing similar observable traits, avoiding variance artificial compression that occurs with simple mean substitution.",
-    competency: "Data Quality",,
+    competency: "Data Quality",
   },
     {
     id: 30,
@@ -462,7 +462,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "K-fold cross-validation splits data into k non-overlapping subsets, iteratively training on k-1 folds and testing on the held-out fold, ensuring reliable out-of-sample performance estimation.",
-    competency: "Machine Learning",,
+    competency: "Machine Learning",
   },
     {
     id: 31,
@@ -477,7 +477,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "ROW_NUMBER() with PARTITION BY divides results into logical groups and computes a sequential ranking based on the ORDER BY clause within each distinct partition.",
-    competency: "SQL & Data Management",,
+    competency: "SQL & Data Management",
   },
     {
     id: 32,
@@ -492,7 +492,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "Pandas groupby aggregation leverages vectorised C/Cython execution across multi-index keys, providing fast, memory-efficient statistical summarisation for large datasets.",
-    competency: "Python",,
+    competency: "Python",
   },
     {
     id: 33,
@@ -507,7 +507,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 0,
     explanation:
       "Multi-stage stratified sampling first stratifies broad geographic regions into primary sampling units (FSUs/Census Enumeration Blocks), followed by secondary sampling units (SSUs/households) inside selected FSUs.",
-    competency: "Survey Sampling",,
+    competency: "Survey Sampling",
   },
     {
     id: 34,
@@ -522,7 +522,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 1,
     explanation:
       "NQAF defines product quality through established dimensions: relevance to user needs, empirical accuracy/reliability, timeliness of release, accessibility/clarity, and geographic/temporal comparability.",
-    competency: "Data Quality",,
+    competency: "Data Quality",
   },
     {
     id: 35,
@@ -537,7 +537,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 2,
     explanation:
       "Administrative big data from GSTN/e-way bills linked via enterprise PAN/GSTIN provides high-frequency leading indicators of manufacturing and logistics, complementing traditional structural surveys.",
-    competency: "Digital Data Governance",,
+    competency: "Digital Data Governance",
   },
     {
     id: 36,
@@ -552,7 +552,7 @@ const mockQuestions: QuizQuestion[] = [
     correctAnswer: 3,
     explanation:
       "Geographic coordinates (EPSG:4326) measure angles in degrees. Precise metric distance buffering requires reprojecting layers into a Projected Coordinate System (e.g. UTM) where coordinates represent linear metres.",
-    competency: "GIS & Spatial Mapping",,
+    competency: "GIS & Spatial Mapping",
   },
 ];
 
