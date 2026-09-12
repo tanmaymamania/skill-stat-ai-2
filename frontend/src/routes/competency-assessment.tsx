@@ -133,9 +133,9 @@ function CompetencyAssessmentPage() {
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{resumeFileName || "Statistical_Cadre_Profile_Evidence.pdf"}</p>
+                      <p className="truncate text-sm font-semibold text-foreground">{resumeFileName || "Candidate Competency Profile"}</p>
                       <p className="text-xs text-muted-foreground">
-                        Verified Identity Evidence for: <span className="font-semibold text-foreground">{profile.name || "Candidate"}</span> ({profile.designation || "Cadre Officer"})
+                        Verified Identity Evidence for: <span className="font-semibold text-foreground">{profile.name || "Candidate"}</span> {profile.designation ? `(${profile.designation})` : ""}
                       </p>
                     </div>
                   </div>

@@ -87,12 +87,19 @@ export function switchActiveUser(user: AuthUser): void {
   if (savedProfile) {
     localStorage.setItem("statskill.currentUserProfile", savedProfile);
   } else {
+    const isDemo = user.email.toLowerCase() === DEFAULT_DEMO_ACCOUNT.email.toLowerCase();
     const newProfile: CurrentUserProfile = {
       ...defaultCurrentUserProfile,
       name: user.name,
-      designation: user.designation || "Statistical Cadre Officer",
-      department: user.department || "Ministry of Statistics & Programme Implementation",
-      existingSkills: user.email === DEFAULT_DEMO_ACCOUNT.email ? ["Survey Sampling", "Python", "Data Quality", "SQL"] : [],
+      designation: user.designation || (isDemo ? "Statistical Officer" : ""),
+      department: user.department || (isDemo ? "Ministry of Statistics (MoSPI)" : ""),
+      currentAssignment: isDemo ? "NSS / Field Survey Operations & Multi-stage Sampling" : "",
+      highestQualification: isDemo ? "Master's in Statistics (M.Stat / M.Sc. Statistics)" : "",
+      yearsOfExperience: isDemo ? "Junior Officer (1 - 3 Years)" : "",
+      workExperience: isDemo ? "Survey data collection, validation, analysis and official statistical reporting." : "",
+      previousTraining: isDemo ? "MoSPI Cadre Baseline Training" : "",
+      resumeFileName: isDemo ? "Statistical_Officer_Cadre_Profile.pdf" : "",
+      existingSkills: isDemo ? ["Survey Sampling", "Python", "Data Quality", "SQL"] : [],
     };
     saveCurrentUserProfile(newProfile);
     localStorage.setItem(userProfileKey, JSON.stringify(newProfile));

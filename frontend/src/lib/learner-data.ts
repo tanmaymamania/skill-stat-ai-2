@@ -458,6 +458,25 @@ const mockSkillGapDomains: SkillGapDomain[] = [
   },
 ];
 
+export function hasUserCompletedAssessment(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const saved = localStorage.getItem("user_assessed_skills");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return true;
+    }
+    const gap = localStorage.getItem("user_assessed_gap");
+    if (gap) {
+      const parsed = JSON.parse(gap);
+      if (parsed && typeof parsed.gap === "number") return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function getSkillGapSummaries(): SkillGapSummary[] {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem("user_assessed_skills");
@@ -492,7 +511,7 @@ export function getSkillGapSummaries(): SkillGapSummary[] {
       } catch (e) {}
     }
   }
-  return mockSkillGapSummaries;
+  return [];
 }
 
 export function getSkillGapRows(): SkillGapRow[] {
@@ -507,7 +526,8 @@ export function getSkillGapRows(): SkillGapRow[] {
       } catch (e) {}
     }
   }
-  return mockSkillGapRows;
+  // A new user ID has no assessed skill gaps until they complete the AI quiz
+  return [];
 }
 
 export function saveSkillGapRows(rows: SkillGapRow[]) {
@@ -539,22 +559,22 @@ export function getSkillGapDomains(): SkillGapDomain[] {
           return [
             {
               domain: "Technical & Analytical",
-              gap: calcDomainGap(techGaps) || 12,
+              gap: calcDomainGap(techGaps),
               note: "Python, GIS and automated data workflows",
             },
             {
               domain: "Statistical Sciences",
-              gap: calcDomainGap(statGaps) || 8,
+              gap: calcDomainGap(statGaps),
               note: "National accounts, sampling and estimation",
             },
             {
               domain: "Managerial & Field Operations",
-              gap: 4,
+              gap: 0,
               note: "Field coordination and quality controls",
             },
             {
               domain: "Digital Governance",
-              gap: calcDomainGap(govGaps) || 0,
+              gap: calcDomainGap(govGaps),
               note: "DPDP Act compliance and official standards",
             },
           ];
@@ -562,7 +582,7 @@ export function getSkillGapDomains(): SkillGapDomain[] {
       } catch (e) {}
     }
   }
-  return mockSkillGapDomains;
+  return [];
 }
 
 export function getPriorityGapCount(): number {
@@ -644,11 +664,12 @@ export function getLearningRecommendations(): LearningPathRecommendation[] {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {
-        // Fallback to default
+        // Fallback
       }
     }
   }
-  return mockLearningRecommendations;
+  // For unassessed users, there are no recommendations until the quiz is completed
+  return [];
 }
 
 export function saveLearningRecommendations(paths: LearningPathRecommendation[]) {

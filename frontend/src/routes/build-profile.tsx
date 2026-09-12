@@ -69,17 +69,17 @@ function BuildProfilePage() {
         ? currentUser.designation
         : currentUser.designation
           ? "Other"
-          : CADRE_JOB_ROLES[0],
+          : "",
       customDesignation: isStandardRole ? "" : currentUser.designation || "",
       department: isStandardDept
         ? currentUser.department
         : currentUser.department
           ? "Other"
-          : CADRE_DEPARTMENTS[0],
+          : "",
       customDepartment: isStandardDept ? "" : currentUser.department || "",
-      currentAssignment: currentUser.currentAssignment || CADRE_ASSIGNMENTS[0],
-      highestQualification: currentUser.highestQualification || CADRE_QUALIFICATIONS[0],
-      yearsOfExperience: currentUser.yearsOfExperience || CADRE_EXPERIENCE_LEVELS[1],
+      currentAssignment: currentUser.currentAssignment || "",
+      highestQualification: currentUser.highestQualification || "",
+      yearsOfExperience: currentUser.yearsOfExperience || "",
       previousTraining: currentUser.previousTraining || "",
     };
   });
@@ -88,7 +88,7 @@ function BuildProfilePage() {
     () => getCurrentUserProfile().existingSkills,
   );
   const [workExperience, setWorkExperience] = useState(
-    () => getCurrentUserProfile().workExperience || "Survey data collection, validation, analysis and official statistical reporting.",
+    () => getCurrentUserProfile().workExperience || "",
   );
   const [newSkill, setNewSkill] = useState("");
 
@@ -234,10 +234,10 @@ function BuildProfilePage() {
       currentAssignment: profile.currentAssignment.trim(),
       highestQualification: profile.highestQualification.trim(),
       yearsOfExperience: profile.yearsOfExperience.trim(),
-      previousTraining: profile.previousTraining.trim() || "MoSPI Cadre Baseline Training",
+      previousTraining: profile.previousTraining.trim(),
       existingSkills,
-      workExperience: workExperience.trim() || "Survey data collection, validation, analysis and official statistical reporting.",
-      resumeFileName: resumeFile ? resumeFile.name : "Statistical_Officer_Cadre_Profile.pdf",
+      workExperience: workExperience.trim(),
+      resumeFileName: resumeFile ? resumeFile.name : (getCurrentUserProfile().resumeFileName || ""),
     });
 
     // Navigate to dynamic AI diagnostic assessment
@@ -342,6 +342,7 @@ function BuildProfilePage() {
                       onChange={(e) => updateProfile("designation", e.target.value)}
                       className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
                     >
+                      <option value="">-- Select Cadre Job Role --</option>
                       {CADRE_JOB_ROLES.map((role) => (
                         <option key={role} value={role}>
                           {role}
@@ -387,6 +388,7 @@ function BuildProfilePage() {
                       onChange={(e) => updateProfile("department", e.target.value)}
                       className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
                     >
+                      <option value="">-- Select Ministry / Department --</option>
                       {CADRE_DEPARTMENTS.map((dept) => (
                         <option key={dept} value={dept}>
                           {dept}
@@ -415,6 +417,7 @@ function BuildProfilePage() {
                       onChange={(e) => updateProfile("currentAssignment", e.target.value)}
                       className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
                     >
+                      <option value="">-- Select Cadre Assignment --</option>
                       {CADRE_ASSIGNMENTS.map((asg) => (
                         <option key={asg} value={asg}>
                           {asg}
@@ -433,6 +436,7 @@ function BuildProfilePage() {
                       onChange={(e) => updateProfile("highestQualification", e.target.value)}
                       className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
                     >
+                      <option value="">-- Select Highest Qualification --</option>
                       {CADRE_QUALIFICATIONS.map((q) => (
                         <option key={q} value={q}>
                           {q}
@@ -451,6 +455,7 @@ function BuildProfilePage() {
                       onChange={(e) => updateProfile("yearsOfExperience", e.target.value)}
                       className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
                     >
+                      <option value="">-- Select Cadre Experience --</option>
                       {CADRE_EXPERIENCE_LEVELS.map((exp) => (
                         <option key={exp} value={exp}>
                           {exp}

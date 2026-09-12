@@ -12,10 +12,11 @@ import {
   Award,
   Clock,
   ShieldCheck,
+  Lock,
 } from "lucide-react";
 
 import { StatSkillWordmark } from "@/components/StatSkillLogo";
-import { getPriorityGapCount } from "@/lib/learner-data";
+import { getPriorityGapCount, hasUserCompletedAssessment } from "@/lib/learner-data";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -45,7 +46,7 @@ const groups: NavGroup[] = [
         icon: TrendingDown,
         to: "/skill-gap-analysis",
         get badge() {
-          return String(getPriorityGapCount());
+          return hasUserCompletedAssessment() && getPriorityGapCount() > 0 ? String(getPriorityGapCount()) : undefined;
         },
       },
       {
@@ -76,6 +77,7 @@ const itemClass =
 
 export function DashboardSidebar({ className }: { className?: string }) {
   const [activeModal, setActiveModal] = useState<"badges" | "certificates" | "settings" | null>(null);
+  const isAssessed = hasUserCompletedAssessment();
 
   return (
     <>
@@ -99,12 +101,43 @@ export function DashboardSidebar({ className }: { className?: string }) {
               <ul className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
+                  const isLocked =
+                    !isAssessed &&
+                    (item.to === "/skill-gap-analysis" ||
+                      item.to === "/learning-paths");
+                  const isQuizRequired =
+                    !isAssessed && item.to === "/ai-assessment-quiz";
+
+                  if (isLocked) {
+                    return (
+                      <li key={item.label}>
+                        <Link
+                          to="/ai-assessment-quiz"
+                          className={cn(
+                            itemClass,
+                            "opacity-75 hover:opacity-100",
+                          )}
+                          title="Complete the AI Assessment Quiz first to unlock"
+                        >
+                          <Icon className="h-[18px] w-[18px] text-muted-foreground" />
+                          <span className="flex-1 text-left">{item.label}</span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                            <Lock className="h-3 w-3" /> Locked
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  }
 
                   const content = (
                     <>
                       <Icon className="h-[18px] w-[18px]" />
                       <span className="flex-1 text-left">{item.label}</span>
-                      {item.badge ? (
+                      {isQuizRequired ? (
+                        <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground animate-pulse">
+                          Required
+                        </span>
+                      ) : item.badge ? (
                         <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-bold text-destructive">
                           {item.badge}
                         </span>
@@ -117,7 +150,10 @@ export function DashboardSidebar({ className }: { className?: string }) {
                       {item.to ? (
                         <Link
                           to={item.to}
-                          className={itemClass}
+                          className={cn(
+                            itemClass,
+                            isQuizRequired && "border border-accent/30 bg-accent/5 font-semibold text-foreground",
+                          )}
                           activeProps={{
                             className:
                               "bg-accent-soft text-accent hover:bg-accent-soft hover:text-accent",
