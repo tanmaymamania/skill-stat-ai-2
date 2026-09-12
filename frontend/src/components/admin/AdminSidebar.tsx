@@ -38,7 +38,9 @@ export function AdminSidebar({ className }: { className?: string }) {
       )}
     >
       <div className="border-b border-border px-6 py-5">
-        <StatSkillWordmark />
+        <Link to="/admin-dashboard" className="block hover:opacity-90">
+          <StatSkillWordmark />
+        </Link>
         <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Administration
         </p>

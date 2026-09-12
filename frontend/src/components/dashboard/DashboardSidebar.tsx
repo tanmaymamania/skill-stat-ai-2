@@ -39,7 +39,7 @@ const groups: NavGroup[] = [
       {
         label: "Dashboard",
         icon: LayoutDashboard,
-        to: "/",
+        to: "/dashboard",
       },
       {
         label: "Skill Gap Analysis",
@@ -88,7 +88,9 @@ export function DashboardSidebar({ className }: { className?: string }) {
         )}
       >
         <div className="border-b border-border px-6 py-5">
-          <StatSkillWordmark />
+          <Link to="/dashboard" className="block hover:opacity-90">
+            <StatSkillWordmark />
+          </Link>
         </div>
 
         <nav className="flex-1 space-y-7 overflow-y-auto px-4 py-6">
