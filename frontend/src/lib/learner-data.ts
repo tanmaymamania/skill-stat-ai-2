@@ -92,6 +92,39 @@ export function getSummaryStats(): DashboardSummaryStat[] {
       try {
         const data = JSON.parse(session);
         const scorePct = data.score?.percentage ?? 80;
+
+        // Calculate dynamic learning stats from real course progress
+        const paths = getLearningRecommendations();
+        let totalCompletedHours = 0;
+        let totalProgressSum = 0;
+        let inProgressCount = 0;
+
+        if (paths.length > 0) {
+          paths.forEach((p) => {
+            const match = p.duration?.match(/(\d+(\.\d+)?)/);
+            const courseHours = match ? parseFloat(match[1]) : 4;
+            const progressVal =
+              typeof p.progress === "number"
+                ? Math.max(0, Math.min(100, p.progress))
+                : 0;
+            totalCompletedHours += (courseHours * progressVal) / 100;
+            totalProgressSum += progressVal;
+            if (p.status === "In Progress" || progressVal > 0) {
+              inProgressCount++;
+            }
+          });
+        }
+
+        const avgProgress =
+          paths.length > 0
+            ? Math.round(totalProgressSum / paths.length)
+            : 0;
+        const formattedHours = totalCompletedHours.toFixed(1);
+        const hoursTargetPct = Math.min(
+          100,
+          Math.round((totalCompletedHours / 50) * 100),
+        );
+
         return [
           {
             label: "Overall Competency",
@@ -104,30 +137,45 @@ export function getSummaryStats(): DashboardSummaryStat[] {
           },
           {
             label: "Learning Progress",
-            tag: "Active",
-            tagTone: "accent",
-            value: "25%",
-            valueNote: "learning path started",
-            footnote: "Targeted iGOT remediation active",
-            progress: 25,
+            tag: avgProgress > 0 ? "Active" : "Not Started",
+            tagTone: avgProgress > 0 ? "accent" : "neutral",
+            value: `${avgProgress}%`,
+            valueNote:
+              paths.length > 0
+                ? `across ${paths.length} recommended tracks`
+                : "tracks not started",
+            footnote:
+              inProgressCount > 0
+                ? `${inProgressCount} active module(s) in progress`
+                : "Start an NPTEL/iGOT course to begin",
+            progress: avgProgress,
           },
           {
             label: "Total Learning Hours",
-            tag: "Logged",
-            tagTone: "neutral",
-            value: "2.0",
+            tag: totalCompletedHours > 0 ? "Logged" : "Not Started",
+            tagTone: totalCompletedHours > 0 ? "accent" : "neutral",
+            value: formattedHours,
             valueNote: "hrs",
-            footnote: "Logged this fiscal year (Target: 50 hrs)",
-            progress: 4,
+            footnote:
+              totalCompletedHours > 0
+                ? `${formattedHours} of 50.0 hrs annual target logged`
+                : "Target: 50 hrs for fiscal year",
+            progress: hoursTargetPct,
           },
           {
             label: "Active Paths",
-            tag: "In Progress",
-            tagTone: "accent",
-            value: "1",
-            valueNote: "track recommended",
-            footnote: `${data.skill} Remedial Course`,
-            progress: 25,
+            tag: inProgressCount > 0 ? "In Progress" : "Available",
+            tagTone: inProgressCount > 0 ? "accent" : "neutral",
+            value: String(inProgressCount),
+            valueNote:
+              paths.length > 0
+                ? `of ${paths.length} tracks started`
+                : "no active tracks",
+            footnote:
+              inProgressCount > 0
+                ? `${inProgressCount} course(s) currently being studied`
+                : `${paths.length} recommended course(s) ready`,
+            progress: avgProgress,
           },
         ];
       } catch (e) {
@@ -158,7 +206,7 @@ export function getSummaryStats(): DashboardSummaryStat[] {
     },
     {
       label: "Total Learning Hours",
-      tag: "Logged",
+      tag: "Not Started",
       tagTone: "neutral",
       value: "0.0",
       valueNote: "hrs",
